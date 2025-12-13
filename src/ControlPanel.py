@@ -47,17 +47,17 @@ class ControlPanel(ABC):
                 break
             
     # Callback adders
-    def addDispatchCallback(self, callback: Callable[[],None]) -> None:
+    def addDispatchCallback(self, callback: Callable[[], None]) -> None:
         self.__dispatchCallbacks.append(callback)
-    def addResetCallback(self, callback: Callable[[],None]) -> None:
+    def addResetCallback(self, callback: Callable[[], None]) -> None:
         self.__resetCallbacks.append(callback)
-    def addStopCallback(self, callback: Callable[[],None]) -> None:
+    def addStopCallback(self, callback: Callable[[], None]) -> None:
         self.__stopCallbacks.append(callback)
-    def addEstopCallback(self, callback: Callable[[],None]) -> None:
+    def addEstopCallback(self, callback: Callable[[], None]) -> None:
         self.__estopCallbacks.append(callback)
-    def addMaintenanceSwitchCallback(self, callback: Callable[[],None]) -> None:
+    def addMaintenanceSwitchCallback(self, callback: Callable[[], None]) -> None:
         self.__maintenanceSwitchCallbacks.append(callback)
-    def addMaintenanceJogSwitchCallback(self, callback: Callable[[],None]) -> None:
+    def addMaintenanceJogSwitchCallback(self, callback: Callable[[], None]) -> None:
         self.__maintenanceJogSwitchCallbacks.append(callback)
     
     
