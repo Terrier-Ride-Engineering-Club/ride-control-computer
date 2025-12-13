@@ -63,4 +63,4 @@ class ControlPanel(ABC):
     
     def _addListToCallbackQueue(self, callbackList: List[Callable[[], None]]) -> None:
         for callback in callbackList:
-            self.callbackList.append(callback)
+            self.__callbackQueue.put(callback)
