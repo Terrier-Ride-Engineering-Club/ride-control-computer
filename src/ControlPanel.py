@@ -2,10 +2,7 @@ from abc import ABC, abstractmethod
 from typing import List, Callable
 from queue import Queue, Empty
 
-"""
-Interface for a control panel.
 
-"""
 class ControlPanel(ABC):
     """
     Interface for ride control panel implementations.
