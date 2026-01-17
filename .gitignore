@@ -1,4 +1,6 @@
 ride-control-computer.code-workspace
 *.pyc
-.vscode/settings.json
+
 /src/ride_control_computer.egg-info
+/.vscode
+
