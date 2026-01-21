@@ -10,7 +10,7 @@ This repo hosts all of the code and files related to Terrier Ride Engineering Cl
 ## Credits
 __Project Credits:__ <br>
 Jackson Justus - Electrical Lead -- jackjust@bu.edu <br>
-Liam Mertens - Electrical Member -- ADD EMAIL <br>
+Liam Mertens - Electrical Member -- lmertens@bu.edu <br>
 
 __Club Leadership:__ <br>
 Electrical Lead: Jackson Justus (jackjust@bu.edu) <br>
