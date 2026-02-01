@@ -1,5 +1,6 @@
 from ride_control_computer.motor_controller.MotorController import MotorController
 from ride_control_computer.theming_controller.ThemingController import ThemingController
+from ride_control_computer.webserver import WebserverController
 from ride_control_computer.control_panel.ControlPanel import ControlPanel, MomentaryButtonState, MomentarySwitchState, SustainedSwitchState
 import threading
 
@@ -14,6 +15,7 @@ class RCC:
     __motorController: MotorController
     __controlPanel: ControlPanel
     __themingController: ThemingController
+    __webserverController: WebserverController
 
     __maintenance_mode: bool
 
@@ -21,11 +23,13 @@ class RCC:
             self,
             motorController: MotorController,
             controlPanel: ControlPanel,
-            themingController: ThemingController
+            themingController: ThemingController,
+            webserverController: WebserverController
             ):
         self.__motorController = motorController
         self.__controlPanel = controlPanel
         self.__themingController = themingController
+        self.__webserverController = webserverController
 
         # Map control panel callbacks
         controlPanel.addDispatchCallback(self.__onDispatch)
