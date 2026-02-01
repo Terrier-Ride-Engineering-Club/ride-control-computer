@@ -70,7 +70,7 @@ class MockWebserverController(WebserverController):
             """
             return render_template_string(html, data=data)
 
-        self.app.run(debug=True)
+        self.app.run(debug=False)
 
 if __name__ == '__main__':
     test = MockWebserverController()

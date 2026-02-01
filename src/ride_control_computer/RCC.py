@@ -42,8 +42,13 @@ class RCC:
     def run(self):
         """Blocking call to start the Ride Control Computer"""
         # Launch control panel thread
+
         threading.Thread(
-            target=self.__controlPanel.run(),
+            target=self.__controlPanel.run,
+            daemon=True).start()
+
+        threading.Thread(
+            target=self.__webserverController.start,
             daemon=True).start()
         
         while (True):

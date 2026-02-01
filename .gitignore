@@ -5,3 +5,4 @@ ride-control-computer.code-workspace
 /.vscode
 
 /venv
+/.venv
