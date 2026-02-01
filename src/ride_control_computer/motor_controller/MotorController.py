@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from enum import Enum
+from typing import Tuple
 
 class MotorControllerState(Enum):
     IDLE =          0, 
@@ -46,6 +47,16 @@ class MotorController(ABC):
         """Decelerates gently to a stop"""
         ...
 
+    @abstractmethod
+    def haltMotion(self):
+        """Immediately stops motion"""
+        ...
+
+    @abstractmethod
+    def getMotorSpeed(self) -> tuple[float, float]:
+        """Gets the motor speed for both towers."""
+        ...
+        
     @abstractmethod
     def haltMotion(self):
         """Immediately stops motion"""

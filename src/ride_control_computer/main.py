@@ -5,13 +5,25 @@ from ride_control_computer.control_panel.MockControlPanel import MockControlPane
 from ride_control_computer.theming_controller.MockThemeingController import MockThemingController
 from ride_control_computer.webserver.MockWebserverController import MockWebserverController
 
+"""
+HOW TO RUN THIS PROJECT:
 
-def main():
+1. Activate venv w/ requirements.txt installed
+2. Do `pip install -e .` 
+3. python -m ride_control_computer.main
+
+"""
+
+def main(): 
+    mc = MockMotorController()
+    cp = MockControlPanel()
+    tc = MockThemingController()
+    wc = MockWebserverController(getSpeed=mc.getMotorSpeed)
     rideControlComputer = RCC(
-        MockMotorController(),
-        MockControlPanel(),
-        MockThemingController(),
-        MockWebserverController
+        mc,
+        cp,
+        tc,
+        wc
     )
 
     rideControlComputer.run()

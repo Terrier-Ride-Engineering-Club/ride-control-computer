@@ -2,10 +2,14 @@ from ride_control_computer.webserver.WebserverController import WebserverControl
 from flask import Flask, render_template_string
 
 class MockWebserverController(WebserverController):
-    def __init__(self):
-        super().__init__()
+
+    def __init__(self, getSpeed):
+        super().__init__(getSpeed)
 
     def start(self):
+        #  motor speed:
+        self.getSpeed()
+
         @self.app.route('/')
         def index():
             return page_one()
@@ -68,5 +72,6 @@ class MockWebserverController(WebserverController):
 
         self.app.run(debug=True)
 
-test = MockWebserverController()
-test.start()
+if __name__ == '__main__':
+    test = MockWebserverController()
+    test.start()

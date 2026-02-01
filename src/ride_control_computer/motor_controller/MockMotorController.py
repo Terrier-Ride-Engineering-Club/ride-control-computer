@@ -1,4 +1,5 @@
 from ride_control_computer.motor_controller.MotorController import MotorControllerState, MotorController
+import random
 
 class MockMotorController(MotorController):
 
@@ -16,4 +17,9 @@ class MockMotorController(MotorController):
 
     def haltMotion(self):
         self._state = MotorControllerState.STOPPING
+
+    def getMotorSpeed(self) -> tuple[float, float]:
+        return random.random()*100, random.random()*100
+        
+        
         
