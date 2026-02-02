@@ -29,7 +29,7 @@ class CRCException(Exception):
 
 class RoboClaw:
     """
-    Interface for low-level communication between the software motor controller
+    Stateless Interface for low-level communication between the software motor controller
     and the hardware RoboClaw. Abstracts the specifics of the RoboClaw's serial protocol.
     """
     def __init__(self, port='/dev/ttyAMA1', address=0x80, auto_recover=False, **kwargs):
@@ -153,7 +153,7 @@ class RoboClaw:
     #                           READ COMMANDS
     # =========================================================================
 
-    def read_encoder(self, motor: int) -> dict:
+    def read_encoder_pos(self, motor: int) -> dict:
         """
         Read encoder count/position with status flags.
 
@@ -177,6 +177,27 @@ class RoboClaw:
             "underflow": bool(status & 0x01),
             "direction": "Backward" if (status & 0x02) else "Forward",
             "overflow": bool(status & 0x04)
+        }
+
+    def read_encoder_speed(self, motor: int) -> dict:
+        """
+        Read encoder speed in pulses per second.
+
+        RoboClaw tracks how many pulses are received per second for both encoder channels.
+
+        Args:
+            motor: Motor number (1 or 2)
+
+        Returns:
+            Dictionary with keys:
+                - speed: Speed in pulses per second (unsigned)
+                - direction: "Forward" or "Backward"
+        """
+        cmd = Cmd.GETM1SPEED if motor == 1 else Cmd.GETM2SPEED
+        speed, status = self._read(cmd, '>IB')
+        return {
+            "speed": speed,
+            "direction": "Backward" if status else "Forward"
         }
 
     def read_range(self, motor: int) -> tuple:
@@ -203,7 +224,7 @@ class RoboClaw:
         Returns:
             Position as percentage (0-100) of the configured range
         """
-        encoder = self.read_encoder(motor)["encoder"]
+        encoder = self.read_encoder_pos(motor)["encoder"]
         range_vals = self.read_range(motor)
         return ((encoder - range_vals[0]) / float(range_vals[1] - range_vals[0])) * 100.0
 
@@ -585,7 +606,7 @@ class RoboClaw:
         print(f"Vb: {voltage}V")
 
         for motor in motors:
-            encoder_data = self.read_encoder(motor)
+            encoder_data = self.read_encoder_pos(motor)
             encoder = encoder_data["encoder"]
             direction = encoder_data["direction"]
             max_speed = self.read_max_speed(motor)
