@@ -62,5 +62,5 @@ class MotorController(ABC):
         """Immediately stops motion"""
         ...
 
-    def getState(self):
+    def getState(self) -> MotorControllerState:
         return self._state

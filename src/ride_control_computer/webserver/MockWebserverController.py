@@ -3,12 +3,13 @@ from flask import Flask, render_template_string
 
 class MockWebserverController(WebserverController):
 
-    def __init__(self, getSpeed):
-        super().__init__(getSpeed)
+    def __init__(self, getSpeed, getState):
+        super().__init__(getSpeed,getState)
 
     def start(self):
-        #  motor speed:
+        #Motor information:
         self.getSpeed()
+        self.getState()
 
         @self.app.route('/')
         def index():
@@ -16,12 +17,15 @@ class MockWebserverController(WebserverController):
 
         @self.app.route('/one')
         def page_one():
-            return """
-                <h1 style='text-align:center;'>data tba</h2>
+            speed = self.getSpeed()
+            state = self.getState()
+            html = """
+                <h1 style='text-align:center;'>speed = {{ speed }}, state = {{ state }}</h2>
                 <div style="text-align:center; margin-top:20px;">
                     <a href="/one"><button style="padding: 12px 24px; font-size:18px;"}>One</button></a>
                     <a href="/two"><button style="padding: 12px 24px; font-size:18px;"}>Two</button></a>
                 </div>"""
+            return render_template_string(html, speed=speed, state=state)
 
         @self.app.route('/two')
         def page_two():
