@@ -63,11 +63,6 @@ class MotorController(ABC):
     def getMotorSpeed(self) -> tuple[float, float]:
         """Gets the motor speed for both towers."""
         ...
-        
-    @abstractmethod
-    def haltMotion(self):
-        """Immediately stops motion"""
-        ...
 
     def getState(self) -> MotorControllerState:
         return self._state
