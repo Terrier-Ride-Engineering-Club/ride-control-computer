@@ -1,33 +1,16 @@
-from abc import ABC, abstractmethod
-from enum import Enum
-from typing import Tuple
+# RoboClaw motorcontroller TREC's REC Ride Control Computer
+    # Made by Jackson Justus (jackjust@bu.edu)
 
-class MotorControllerState(Enum):
-    IDLE =          0, 
-    JOGGING =       1, 
-    HOMING =        2, 
-    SEQUENCING =    3, 
-    STOPPING =      4, 
-    DISABLED =      5
+from ride_control_computer.motor_controller.MotorController import MotorController, MotorControllerState
 
-class MotorController(ABC):
+class RoboClawSerialMotorController(MotorController):
     """
-    Interface for a MotorController.
-
-    This motor controller is responsible for the following:
-        1. Talking to a implementation-specific motorcontroller.
-        2. Taking motor start/stop commands.
-            a. When given the start command, the motor controller should follow a pre-defined ride sequence.
-        3. Providing feedback on the state of the motor controller, including motor speed, temp, etc.
-            a. This information via get() functions in this interface.
+    Implementation of MotorController using a RoboClaw Motor Controller over a serial port.
     """
-
-    _state: MotorControllerState
 
     def __init__(self):
-        ...
+        super().__init__()
 
-    @abstractmethod
     def startRideSequence(self):
         """Starts the ride sequence"""
         ...
@@ -36,11 +19,11 @@ class MotorController(ABC):
     def home(self):
         """Stops the ride sequence and brings the motors to the home position"""
         ...
-    
+
     @abstractmethod
     def jogMotor(self, motorNumber: int, direction: int) -> bool:
         """
-        Jogs the motor continuously in a direction for 10ms. 
+        Jogs the motor continuously in a direction for 10ms.
         Must be called again to keep the motor moving.
         MotorController must be in idle for this to work.
 
@@ -63,7 +46,7 @@ class MotorController(ABC):
     def getMotorSpeed(self) -> tuple[float, float]:
         """Gets the motor speed for both towers."""
         ...
-        
+
     @abstractmethod
     def haltMotion(self):
         """Immediately stops motion"""

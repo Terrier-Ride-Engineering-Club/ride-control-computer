@@ -4,6 +4,8 @@ from ride_control_computer.motor_controller.MockMotorController import MockMotor
 from ride_control_computer.control_panel.MockControlPanel import MockControlPanel
 from ride_control_computer.theming_controller.MockThemeingController import MockThemingController
 from ride_control_computer.webserver.MockWebserverController import MockWebserverController
+# Entry Point for TREC's REC Ride Control Computer
+    # Made by Jackson Justus (jackjust@bu.edu)
 
 """
 HOW TO RUN THIS PROJECT:
