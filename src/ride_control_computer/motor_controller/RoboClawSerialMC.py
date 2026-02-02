@@ -12,45 +12,27 @@ class RoboClawSerialMotorController(MotorController):
         super().__init__()
 
     def startRideSequence(self):
-        """Starts the ride sequence"""
+        # TODO
         ...
 
-    @abstractmethod
     def home(self):
-        """Stops the ride sequence and brings the motors to the home position"""
+        # TODO
         ...
 
-    @abstractmethod
     def jogMotor(self, motorNumber: int, direction: int) -> bool:
-        """
-        Jogs the motor continuously in a direction for 10ms.
-        Must be called again to keep the motor moving.
-        MotorController must be in idle for this to work.
+        # TODO
 
-        Returns:
-            bool - whether the motor is being jogged.
-        """
         ...
 
-    @abstractmethod
     def stopMotion(self):
-        """Decelerates gently to a stop"""
+        # TODO
         ...
 
-    @abstractmethod
     def haltMotion(self):
-        """Immediately stops motion"""
+        # TODO
         ...
 
-    @abstractmethod
     def getMotorSpeed(self) -> tuple[float, float]:
-        """Gets the motor speed for both towers."""
+        # TODO
         ...
 
-    @abstractmethod
-    def haltMotion(self):
-        """Immediately stops motion"""
-        ...
-
-    def getState(self):
-        return self._state
