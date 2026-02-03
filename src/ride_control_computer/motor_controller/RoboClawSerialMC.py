@@ -74,7 +74,8 @@ class RoboClawSerialMotorController(MotorController):
         if self._telem_thread:
             self._telem_thread.join(timeout=1.0)
 
-        if self._telem_thread.is_alive(): logger.error("Telemetry thread failed to shutdown. ")
+        if self._telem_thread is not None and self._telem_thread.is_alive():
+            logger.error("Telemetry thread failed to shutdown. ")
 
         self._set_state(MotorControllerState.DISABLED)
 
