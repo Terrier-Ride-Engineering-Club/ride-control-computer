@@ -1,5 +1,6 @@
 from ride_control_computer.webserver.WebserverController import WebserverController
 from flask import Flask, render_template_string
+from waitress import serve
 
 class MockWebserverController(WebserverController):
 
@@ -93,4 +94,4 @@ class MockWebserverController(WebserverController):
             </div>
             """
             return render_template_string(html, status=status)
-        self.app.run(debug=False)
+        serve(self.app, host="127.0.0.1")

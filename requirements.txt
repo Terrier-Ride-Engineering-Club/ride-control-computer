@@ -8,5 +8,6 @@ MarkupSafe==3.0.3
 pyserial==3.5
 pythoncrc==1.21
 Werkzeug==3.1.4
+waitress==3.0.2
 zipp==3.23.0
 pytest
