@@ -58,6 +58,3 @@ class TestRoboClawSerialMotorController():
             # Release the blocked poll thread so shutdown doesn't hang
             pollBarrier.set()
             controller.shutdown()
-        def test(self):
-            roboClaw = RoboClaw()
-            mc = RoboClawSerialMotorController(roboClaw)
