@@ -18,7 +18,7 @@ def main():
     mc = MockMotorController()
     cp = MockControlPanel()
     tc = MockThemingController()
-    wc = MockWebserverController(getSpeed=mc.getMotorSpeed, getState=mc.getState)
+    wc = MockWebserverController(getSpeed=mc.getMotorSpeed, getState=mc.getState, startTheming=tc.startShow, stopTheming=tc.stopShow, themeStatus=tc.status)
     rideControlComputer = RCC(
         mc,
         cp,

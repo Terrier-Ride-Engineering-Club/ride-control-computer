@@ -3,8 +3,8 @@ from flask import Flask, render_template_string
 
 class MockWebserverController(WebserverController):
 
-    def __init__(self, getSpeed, getState):
-        super().__init__(getSpeed,getState)
+    def __init__(self, getSpeed, getState, startTheming, stopTheming, themeStatus):
+        super().__init__(getSpeed,getState, startTheming, stopTheming, themeStatus)
 
     def start(self):
         #Motor information:
@@ -13,22 +13,23 @@ class MockWebserverController(WebserverController):
 
         @self.app.route('/')
         def index():
-            return page_one()
+            return one()
 
         @self.app.route('/one')
-        def page_one():
+        def one():
             speed = self.getSpeed()
             state = self.getState()
             html = """
                 <h1 style='text-align:center;'>speed = {{ speed }}, state = {{ state }}</h2>
                 <div style="text-align:center; margin-top:20px;">
-                    <a href="/one"><button style="padding: 12px 24px; font-size:18px;"}>One</button></a>
+                    <a href="/one"><button style="padding: 12px 24px; font-size:18px;"}><b>One</b></button></a>
                     <a href="/two"><button style="padding: 12px 24px; font-size:18px;"}>Two</button></a>
+                    <a href="/three"><button style="padding: 12px 24px; font-size:18px;"}>Three</button></a>
                 </div>"""
             return render_template_string(html, speed=speed, state=state)
 
         @self.app.route('/two')
-        def page_two():
+        def two():
             time_list = [1, 2, 3, 4, 5]
             speed_list = [10, 20, 30, 40, 50]
             position_list = [11, 21, 31, 41, 51]
@@ -67,15 +68,29 @@ class MockWebserverController(WebserverController):
                 </table>
                 <div style="text-align:center; margin-top:20px;">
                     <a href="/one"><button style="padding: 12px 24px; font-size:18px;"}>One</button></a>
-                    <a href="/two"><button style="padding: 12px 24px; font-size:18px;"}>Two</button></a>
+                    <a href="/two"><button style="padding: 12px 24px; font-size:18px;"}><b>Two</b></button></a>
+                    <a href="/three"><button style="padding: 12px 24px; font-size:18px;"}>Three</button></a>
                 </div>
             </body>
             </html>
             """
             return render_template_string(html, data=data)
 
+        @self.app.route('/three')
+        def three():
+            status = self.themeStatus
+            html = """
+            <body style=\"text-align:center;\">
+                <h1> Theming controls </h1>
+                <h2> Status: {{ status }} </h2>
+                <button style="padding: 12px 24px; font-size:18px;" name="Start" onclick="self.startTheming()">Start</button>
+                <button style="padding: 12px 24px; font-size:18px;" name="Stop" onclick="self.stopTheming()">Stop</button>
+            </body>
+            <div style="text-align:center; margin-top:20px;">
+                    <a href="/one"><button style="padding: 12px 24px; font-size:18px;"}>One</button></a>
+                    <a href="/two"><button style="padding: 12px 24px; font-size:18px;"}>Two</button></a>
+                    <a href="/three"><button style="padding: 12px 24px; font-size:18px;"}><b>Three</b></button></a>
+            </div>
+            """
+            return render_template_string(html, status=status)
         self.app.run(debug=False)
-
-if __name__ == '__main__':
-    test = MockWebserverController()
-    test.start()

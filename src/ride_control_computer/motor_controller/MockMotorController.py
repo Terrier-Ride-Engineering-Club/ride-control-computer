@@ -1,5 +1,6 @@
 from ride_control_computer.motor_controller.MotorController import MotorControllerState, MotorController
 import random
+import time
 
 class MockMotorController(MotorController):
 

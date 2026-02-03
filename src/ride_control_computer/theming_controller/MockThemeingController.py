@@ -3,11 +3,12 @@ from ride_control_computer.theming_controller.ThemingController import ThemingCo
 class MockThemingController(ThemingController):
 
     def __init__(self):
+        self.status = "off"
         ...
 
-    def startShow():
-        ...
+    def startShow(self):
+        self.status = "on"
 
-    def stopShow():
-        ...
+    def stopShow(self):
+        self.status = "off"
     
