@@ -255,7 +255,7 @@ class RoboClawSerialMotorController(MotorController):
 
         pollingEndTime = time.time()
         polling_dt = pollingEndTime-pollingStartTime
-        logging.debug(f"Polling took f{polling_dt} ms")
+        logging.debug(f"Polling took {polling_dt} ms")
         # Update cache atomically
         with self._telemetry_lock:
             self._telemetry.motors = motor_data
