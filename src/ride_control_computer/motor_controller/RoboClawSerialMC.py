@@ -3,7 +3,7 @@
 
 import time
 import logging
-from threading import Thread, Event, Lock
+from threading import Thread, Event, Lock, RLock
 
 from ride_control_computer.motor_controller.MotorController import MotorController, MotorControllerState, MotorTelemetry, ControllerTelemetry
 from ride_control_computer.motor_controller.RoboClaw import RoboClaw
@@ -32,7 +32,7 @@ class RoboClawSerialMotorController(MotorController):
 
         # State
         self._state = MotorControllerState.DISABLED
-        self._state_lock = Lock()
+        self._state_lock = RLock()
 
         # Telemetry cache
         self._telemetry = ControllerTelemetry()
@@ -84,11 +84,12 @@ class RoboClawSerialMotorController(MotorController):
     # =========================================================================
 
     def startRideSequence(self):
-        if self._state != MotorControllerState.IDLE:
-            logger.warning(f"Cannot start sequence from state {self._state}")
-            return
-
-        self._set_state(MotorControllerState.SEQUENCING)
+        with self._state_lock:
+            if self._state != MotorControllerState.IDLE:
+                logger.warning(f"Cannot start sequence from state {self._state}")
+                return
+            
+            self._set_state(MotorControllerState.SEQUENCING)
         # TODO: Implement ride sequence
 
     def home(self):
@@ -96,15 +97,16 @@ class RoboClawSerialMotorController(MotorController):
         # TODO: Implement homing
 
     def jogMotor(self, motorNumber: int, direction: int):
-        if self._state not in (MotorControllerState.IDLE, MotorControllerState.JOGGING):
-            logger.debug(f"Cannot jog from state {self._state}")
-            return False
-
         if motorNumber not in (1, 2):
             logger.error(f"Invalid motor number: {motorNumber}")
             return False
 
-        self._set_state(MotorControllerState.JOGGING)
+        with self._state_lock:
+            if self._state not in (MotorControllerState.IDLE, MotorControllerState.JOGGING):
+                logger.debug(f"Cannot jog from state {self._state}")
+                return False
+            
+            self._set_state(MotorControllerState.JOGGING)
 
         speed = self.JOG_SPEED if direction > 0 else -self.JOG_SPEED
         self._roboClaw.set_speed_with_acceleration(motorNumber, speed, self.JOG_ACCELERATION)
