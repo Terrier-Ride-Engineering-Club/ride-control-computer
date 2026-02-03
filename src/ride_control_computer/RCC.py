@@ -66,6 +66,8 @@ class RCC:
             target=self.__webserverController.start,
             daemon=True).start()
 
+        self.__motorController.start()
+
         while True:
             self.__controlPanel.triggerCallbacks()
 
