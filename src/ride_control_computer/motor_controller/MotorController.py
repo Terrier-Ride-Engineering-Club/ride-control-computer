@@ -1,8 +1,29 @@
 # Motor Controller Abstract Interface for TREC's REC Ride Control Computer
     # Made by Jackson Justus (jackjust@bu.edu)
 
+from dataclasses import dataclass, field
 from abc import ABC, abstractmethod
 from enum import Enum
+
+@dataclass
+class MotorTelemetry:
+    """Cached telemetry for a single motor."""
+    speed: float = 0.0
+    encoder: int = 0
+    current: float = 0.0
+    direction: str = "Forward"
+    timestamp: float = 0.0
+
+
+@dataclass
+class ControllerTelemetry:
+    """Cached telemetry for the entire controller."""
+    motors: dict[int, MotorTelemetry] = field(default_factory=lambda: {1: MotorTelemetry(), 2: MotorTelemetry()})
+    voltage: float = 0.0
+    status: str = "Unknown"
+    temp1: float = 0.0
+    temp2: float = 0.0
+    last_update: float = 0.0
 
 class MotorControllerState(Enum):
     IDLE =          0
@@ -84,7 +105,7 @@ class MotorController(ABC):
         ...
 
     # =========================================================================
-    #                           MOTOR TELEMETRY
+    #                               TELEMETRY
     # =========================================================================
 
     @abstractmethod
@@ -156,10 +177,6 @@ class MotorController(ABC):
         """
         ...
 
-    # =========================================================================
-    #                           CONTROLLER TELEMETRY
-    # =========================================================================
-
     @abstractmethod
     def getVoltage(self) -> float:
         """
@@ -208,5 +225,34 @@ class MotorController(ABC):
 
         Returns:
             True if E-Stop is active.
+        """
+        ...
+
+    # =========================================================================
+    #                           TELEMETRY HEALTH
+    # =========================================================================
+
+    @abstractmethod
+    def getTelemetryAge(self) -> float:
+        """
+        Gets the time in seconds since telemetry was last successfully updated.
+
+        Returns:
+            Seconds since last telemetry update. Returns float('inf') if
+            telemetry has never been updated.
+        """
+        ...
+
+    @abstractmethod
+    def isTelemetryStale(self, maxAgeSeconds: float | None = None) -> bool:
+        """
+        Checks if telemetry data is stale (i.e., not being updated in time).
+
+        Args:
+            maxAgeSeconds: Maximum acceptable age in seconds. If None, defaults
+                to 3x the implementation's expected poll interval.
+
+        Returns:
+            True if telemetry data is older than the threshold.
         """
         ...
