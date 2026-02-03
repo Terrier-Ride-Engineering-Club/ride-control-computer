@@ -9,10 +9,17 @@ class WebserverController(ABC):
 
     def __init__(self,
                  getSpeeds: Callable[[], tuple[float, float]],
-                 getState: Callable[[], MotorControllerState]):
+                 getState: Callable[[], MotorControllerState],
+                 startTheming: Callable[[], None],
+                 stopTheming: Callable[[], None],
+                 themeStatus: Callable[[], None]
+                 ):
         self.app = Flask(__name__)
         self.getSpeed = getSpeeds
         self.getState = getState
+        self.startTheming = startTheming
+        self.stopTheming = stopTheming
+        self.themeStatus = themeStatus
 
     def start(self):
         @self.app.route('/')

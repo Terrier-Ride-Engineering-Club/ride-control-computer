@@ -101,7 +101,7 @@ class MotorController(ABC):
 
     @abstractmethod
     def haltMotion(self):
-        """Immediately stops motion (emergency stop)."""
+        """Immediately stops motion"""
         ...
 
     # =========================================================================

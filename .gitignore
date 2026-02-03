@@ -6,6 +6,6 @@ ride-control-computer.code-workspace
 
 /venv
 /.venv
+*.DS_Store
 /.idea
-/.idea/runConfigurations
 /logs

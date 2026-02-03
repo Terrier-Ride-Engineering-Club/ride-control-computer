@@ -1,16 +1,16 @@
+# Entry Point for TREC's REC Ride Control Computer
+    # Made by Jackson Justus (jackjust@bu.edu)
 
 import logging
 import time
 import datetime
 
 from ride_control_computer.RCC import RCC
-
 from ride_control_computer.motor_controller.MockMotorController import MockMotorController
 from ride_control_computer.control_panel.MockControlPanel import MockControlPanel
 from ride_control_computer.theming_controller.MockThemeingController import MockThemingController
 from ride_control_computer.webserver.MockWebserverController import MockWebserverController
-# Entry Point for TREC's REC Ride Control Computer
-    # Made by Jackson Justus (jackjust@bu.edu)
+
 
 """
 HOW TO RUN THIS PROJECT:
@@ -36,7 +36,7 @@ def main():
     mc = MockMotorController()
     cp = MockControlPanel()
     tc = MockThemingController()
-    wc = MockWebserverController(getSpeeds=mc.getMotorSpeeds, getState=mc.getState)
+    wc = MockWebserverController(getSpeeds=mc.getMotorSpeeds, getState=mc.getState, startTheming=tc.startShow, stopTheming=tc.stopShow, themeStatus=tc.status)
     rideControlComputer = RCC(
         mc,
         cp,
