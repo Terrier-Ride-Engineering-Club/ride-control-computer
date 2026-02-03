@@ -3,8 +3,8 @@ from flask import Flask, render_template_string
 
 class MockWebserverController(WebserverController):
 
-    def __init__(self, getSpeed, getState):
-        super().__init__(getSpeed,getState)
+    def __init__(self, getSpeeds, getState):
+        super().__init__(getSpeeds, getState)
 
     def start(self):
         #Motor information:
