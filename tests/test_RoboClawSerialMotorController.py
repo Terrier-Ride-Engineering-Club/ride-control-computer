@@ -1,7 +1,6 @@
 import time
 import threading
 from unittest.mock import patch, MagicMock
-
 from ride_control_computer.motor_controller.RoboClaw import RoboClaw
 from ride_control_computer.motor_controller.RoboClawSerialMC import RoboClawSerialMotorController
 
@@ -25,8 +24,8 @@ def _configureDefaultMock(mockCls: MagicMock) -> MagicMock:
 
     return roboClaw
 
-class TestMotorControllerTests():
-    def testMotorControllerReportsStaleTelemetry(self):
+class TestRoboClawSerialMotorController():
+    def testReportsStaleTelemetry(self):
         with patch(
             "ride_control_computer.motor_controller.RoboClawSerialMC.RoboClaw"
         ) as mockCls:
@@ -54,8 +53,11 @@ class TestMotorControllerTests():
 
             assert voltage == 12.0  # got the cached value
             assert elapsedTime < 0.01  # didn't block (well under 10ms)
-            assert controller.isTelemetryStale()
+            assert controller.isTelemetryStale() # telem is marked as stale
 
             # Release the blocked poll thread so shutdown doesn't hang
             pollBarrier.set()
             controller.shutdown()
+        def test(self):
+            roboClaw = RoboClaw()
+            mc = RoboClawSerialMotorController(roboClaw)
