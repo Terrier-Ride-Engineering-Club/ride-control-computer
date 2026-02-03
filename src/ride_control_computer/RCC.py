@@ -3,6 +3,7 @@
 
 import logging
 import threading
+import time
 
 from ride_control_computer.motor_controller.MotorController import MotorController
 from ride_control_computer.theming_controller.ThemingController import ThemingController
@@ -28,6 +29,9 @@ class RCC:
     __maintenanceMode: bool
     __estopSoftwareLatched: bool
 
+    __lastTelemPrintTime: float
+    TELEMETRY_PRINT_INTERVAL = 2; # time in s
+
     def __init__(
             self,
             motorController: MotorController,
@@ -42,6 +46,8 @@ class RCC:
 
         self.__maintenanceMode = False
         self.__estopSoftwareLatched = False
+
+        self.__lastTelemPrintTime = 0
 
         # Map control panel callbacks
         controlPanel.addDispatchCallback(self.__onDispatch)
@@ -78,6 +84,8 @@ class RCC:
                     self.__handleEstop()
                 else:
                     self.__checkSafetyConstraints()
+
+            self.__printTelemetry()
 
     # =========================================================================
     #                           SAFETY
@@ -194,3 +202,23 @@ class RCC:
         elif state == MomentarySwitchState.NEUTRAL:
             logger.info("Jog released")
             self.__motorController.stopMotion()
+
+    # =========================================================================
+    #                              TELEMETRY
+    # =========================================================================
+
+    def __printTelemetry(self):
+        """Periodically prints telemetry data."""
+
+        elapsed = time.monotonic() - self.__lastTelemPrintTime
+        if elapsed >= self.TELEMETRY_PRINT_INTERVAL:
+            self.__lastTelemPrintTime = time.monotonic()
+
+            # Print telemetry data
+            logger.info("======================== Telemetry ========================")
+            logger.info(f"[E-Stop Software Latched]: {self.__estopSoftwareLatched}")
+            logger.debug(f"[MC Type]: {str(type(self.__motorController))}")
+            logger.info(f"[MC Connection Active]: {self.__motorController.isTelemetryStale()}")
+            logger.info(f"[MC State]: {self.__motorController.getState()}")
+            logger.info("===========================================================")
+
