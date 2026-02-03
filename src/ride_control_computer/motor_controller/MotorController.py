@@ -4,6 +4,9 @@
 from dataclasses import dataclass, field
 from abc import ABC, abstractmethod
 from enum import Enum
+from typing import Optional
+
+from ride_control_computer.loop_timer import LoopTimer
 
 @dataclass
 class MotorTelemetry:
@@ -213,6 +216,11 @@ class MotorController(ABC):
     # =========================================================================
     #                           STATE
     # =========================================================================
+
+    @property
+    def loop_timer(self) -> Optional[LoopTimer]:
+        """Returns the telemetry loop timer, or None if not applicable."""
+        return None
 
     def getState(self) -> MotorControllerState:
         """Gets the current state of the motor controller."""

@@ -4,6 +4,8 @@ from enum import Enum
 from queue import Queue, Empty
 from threading import Thread
 
+from ride_control_computer.loop_timer import LoopTimer
+
 class MomentaryButtonState(Enum):
     PRESSED = 1,
     RELEASED = 2
@@ -36,6 +38,7 @@ class ControlPanel(ABC):
     """
 
     def __init__(self):
+        self._loop_timer = LoopTimer()
         self.__callbackQueue: Queue = Queue()
         
         self.__dispatchCallbacks: List[Callable[[], None]] = []
@@ -81,6 +84,10 @@ class ControlPanel(ABC):
         self.__maintenanceJogSwitchCallbacks.append(callback)
     
     
+    @property
+    def loop_timer(self) -> LoopTimer:
+        return self._loop_timer
+
     def _addListToCallbackQueue(self, callbackList: List[Callable[[], None]]) -> None:
         for callback in callbackList:
             self.__callbackQueue.put(callback)
