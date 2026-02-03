@@ -2,19 +2,20 @@ from abc import ABC, abstractmethod
 from flask import Flask, render_template_string
 from typing import Callable
 
+from ride_control_computer.motor_controller.MotorController import MotorControllerState
 
 class WebserverController(ABC):
     """Webserver Controller and methods"""
 
     def __init__(self,
-                 getSpeed: Callable[None, float],
-                 getState: Callable[None, int],
+                 getSpeeds: Callable[[], tuple[float, float]],
+                 getState: Callable[[], MotorControllerState],
                  startTheming: Callable[[], None],
                  stopTheming: Callable[[], None],
                  themeStatus: Callable[[], None]
                  ):
         self.app = Flask(__name__)
-        self.getSpeed = getSpeed
+        self.getSpeed = getSpeeds
         self.getState = getState
         self.startTheming = startTheming
         self.stopTheming = stopTheming
