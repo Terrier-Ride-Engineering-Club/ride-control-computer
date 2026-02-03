@@ -9,12 +9,12 @@ class ThemingController(ABC):
         ...
 
     @abstractmethod
-    def startShow():
+    def startShow(self):
         """Called by the Theming Controller owner to signal that the ride sequence has started."""
         ...
 
     @abstractmethod
-    def stopShow():
+    def stopShow(self):
         """Called by the Theming Controller owner to signal that the ride sequence has stopped."""
         ...
     

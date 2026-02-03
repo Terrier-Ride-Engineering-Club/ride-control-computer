@@ -5,7 +5,7 @@ from queue import Queue, Empty
 from threading import Thread
 
 class MomentaryButtonState(Enum):
-    PUSHED = 1,
+    PRESSED = 1,
     RELEASED = 2
     
 class SustainedSwitchState(Enum):

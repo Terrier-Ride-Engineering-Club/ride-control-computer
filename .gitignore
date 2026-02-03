@@ -4,3 +4,8 @@ ride-control-computer.code-workspace
 /src/ride_control_computer.egg-info
 /.vscode
 
+/venv
+/.venv
+/.idea
+/.idea/runConfigurations
+/logs
