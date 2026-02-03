@@ -8,3 +8,4 @@ ride-control-computer.code-workspace
 /.venv
 /.idea
 /.idea/runConfigurations
+/logs
