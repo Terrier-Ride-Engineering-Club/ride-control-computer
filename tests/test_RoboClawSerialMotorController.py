@@ -30,7 +30,6 @@ class TestRoboClawSerialMotorController():
             "ride_control_computer.motor_controller.RoboClawSerialMC.RoboClaw"
         ) as mockCls:
             roboClaw = _configureDefaultMock(mockCls)
-            # roboClaw = mockCls
             controller = RoboClawSerialMotorController(roboClaw)
             controller.start()
             time.sleep(0.05)  # let cache populate with fast values
