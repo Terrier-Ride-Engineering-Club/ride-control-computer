@@ -83,9 +83,10 @@ class RoboClawSerialMotorController(MotorController):
     # =========================================================================
 
     def startRideSequence(self):
-        if self._state != MotorControllerState.IDLE:
-            logger.warning(f"Cannot start sequence from state {self._state}")
-            return
+        with self._state_lock:
+            if self._state != MotorControllerState.IDLE:
+                logger.warning(f"Cannot start sequence from state {self._state}")
+                return
 
         self._set_state(MotorControllerState.SEQUENCING)
         # TODO: Implement ride sequence
@@ -95,9 +96,10 @@ class RoboClawSerialMotorController(MotorController):
         # TODO: Implement homing
 
     def jogMotor(self, motorNumber: int, direction: int):
-        if self._state not in (MotorControllerState.IDLE, MotorControllerState.JOGGING):
-            logger.debug(f"Cannot jog from state {self._state}")
-            return False
+        with self._state_lock:
+            if self._state not in (MotorControllerState.IDLE, MotorControllerState.JOGGING):
+                logger.debug(f"Cannot jog from state {self._state}")
+                return False
 
         if motorNumber not in (1, 2):
             logger.error(f"Invalid motor number: {motorNumber}")
