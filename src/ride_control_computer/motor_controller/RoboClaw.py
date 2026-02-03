@@ -7,7 +7,7 @@ import serial
 import struct
 import logging
 from threading import Lock
-from pycrc.CRCCCITT import CRCCCITT # Package is named 'pythoncrc' NOT 'pycrc' on pip
+from PyCRC.CRCCCITT import CRCCCITT # Package is named 'pythoncrc' NOT 'pycrc' on pip
 from ride_control_computer.motor_controller.RoboClaw_cmd import Cmd
 
 # --- SETUP LOGGING ---
