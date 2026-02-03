@@ -89,9 +89,8 @@ class RoboClawSerialMotorController(MotorController):
                 return
             
             # Perform state transition atomically within the lock
-            if self._state != MotorControllerState.SEQUENCING:
-                logger.info(f"State: {self._state.name} -> {MotorControllerState.SEQUENCING.name}")
-                self._state = MotorControllerState.SEQUENCING
+            logger.info(f"State: {self._state.name} -> {MotorControllerState.SEQUENCING.name}")
+            self._state = MotorControllerState.SEQUENCING
         # TODO: Implement ride sequence
 
     def home(self):
@@ -108,8 +107,8 @@ class RoboClawSerialMotorController(MotorController):
                 logger.debug(f"Cannot jog from state {self._state}")
                 return False
             
-            # Perform state transition atomically within the lock
-            if self._state != MotorControllerState.JOGGING:
+            # Perform state transition atomically within the lock (only log if changing from IDLE)
+            if self._state == MotorControllerState.IDLE:
                 logger.info(f"State: {self._state.name} -> {MotorControllerState.JOGGING.name}")
                 self._state = MotorControllerState.JOGGING
 
