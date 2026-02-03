@@ -87,8 +87,11 @@ class RoboClawSerialMotorController(MotorController):
             if self._state != MotorControllerState.IDLE:
                 logger.warning(f"Cannot start sequence from state {self._state}")
                 return
-
-        self._set_state(MotorControllerState.SEQUENCING)
+            
+            # Perform state transition atomically within the lock
+            if self._state != MotorControllerState.SEQUENCING:
+                logger.info(f"State: {self._state.name} -> {MotorControllerState.SEQUENCING.name}")
+                self._state = MotorControllerState.SEQUENCING
         # TODO: Implement ride sequence
 
     def home(self):
@@ -96,16 +99,19 @@ class RoboClawSerialMotorController(MotorController):
         # TODO: Implement homing
 
     def jogMotor(self, motorNumber: int, direction: int):
-        with self._state_lock:
-            if self._state not in (MotorControllerState.IDLE, MotorControllerState.JOGGING):
-                logger.debug(f"Cannot jog from state {self._state}")
-                return False
-
         if motorNumber not in (1, 2):
             logger.error(f"Invalid motor number: {motorNumber}")
             return False
 
-        self._set_state(MotorControllerState.JOGGING)
+        with self._state_lock:
+            if self._state not in (MotorControllerState.IDLE, MotorControllerState.JOGGING):
+                logger.debug(f"Cannot jog from state {self._state}")
+                return False
+            
+            # Perform state transition atomically within the lock
+            if self._state != MotorControllerState.JOGGING:
+                logger.info(f"State: {self._state.name} -> {MotorControllerState.JOGGING.name}")
+                self._state = MotorControllerState.JOGGING
 
         speed = self.JOG_SPEED if direction > 0 else -self.JOG_SPEED
         self._roboClaw.set_speed_with_acceleration(motorNumber, speed, self.JOG_ACCELERATION)
