@@ -3,7 +3,7 @@
 
 import time
 import logging
-from threading import Thread, Event, Lock
+from threading import Thread, Event, Lock, RLock
 
 from ride_control_computer.motor_controller.MotorController import MotorController, MotorControllerState, MotorTelemetry, ControllerTelemetry
 from ride_control_computer.motor_controller.RoboClaw import RoboClaw
@@ -32,7 +32,7 @@ class RoboClawSerialMotorController(MotorController):
 
         # State
         self._state = MotorControllerState.DISABLED
-        self._state_lock = Lock()
+        self._state_lock = RLock()
 
         # Telemetry cache
         self._telemetry = ControllerTelemetry()
@@ -88,9 +88,7 @@ class RoboClawSerialMotorController(MotorController):
                 logger.warning(f"Cannot start sequence from state {self._state}")
                 return
             
-            # Perform state transition atomically within the lock
-            logger.info(f"State: {self._state.name} -> {MotorControllerState.SEQUENCING.name}")
-            self._state = MotorControllerState.SEQUENCING
+            self._set_state(MotorControllerState.SEQUENCING)
         # TODO: Implement ride sequence
 
     def home(self):
@@ -107,10 +105,7 @@ class RoboClawSerialMotorController(MotorController):
                 logger.debug(f"Cannot jog from state {self._state}")
                 return False
             
-            # Perform state transition atomically within the lock (only log if changing from IDLE)
-            if self._state == MotorControllerState.IDLE:
-                logger.info(f"State: {self._state.name} -> {MotorControllerState.JOGGING.name}")
-                self._state = MotorControllerState.JOGGING
+            self._set_state(MotorControllerState.JOGGING)
 
         speed = self.JOG_SPEED if direction > 0 else -self.JOG_SPEED
         self._roboClaw.set_speed_with_acceleration(motorNumber, speed, self.JOG_ACCELERATION)
