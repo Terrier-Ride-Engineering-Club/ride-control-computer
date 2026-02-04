@@ -5,6 +5,7 @@ import time
 import logging
 from threading import Thread, Event, Lock
 
+from ride_control_computer.loop_timer import LoopTimer
 from ride_control_computer.motor_controller.MotorController import MotorController, MotorControllerState, MotorTelemetry, ControllerTelemetry
 from ride_control_computer.motor_controller.RoboClaw import RoboClaw
 
@@ -50,6 +51,9 @@ class RoboClawSerialMotorController(MotorController):
         self._stop_event = Event()
         self._control_thread: Thread | None = None
 
+
+        # Loop timer
+        self._loop_timer = LoopTimer()
 
     # =========================================================================
     #                           LIFECYCLE
@@ -201,6 +205,10 @@ class RoboClawSerialMotorController(MotorController):
     #                           STATE
     # =========================================================================
 
+    @property
+    def loop_timer(self) -> LoopTimer:
+        return self._loop_timer
+
     def getState(self) -> MotorControllerState:
         return self._state
 
@@ -223,6 +231,7 @@ class RoboClawSerialMotorController(MotorController):
         poll_interval = 1.0 / self.POLL_RATE_HZ
 
         while not self._stop_event.is_set():
+            self._loop_timer.tick()
             try:
                 self._execute_state_action()
                 self._poll_telemetry()

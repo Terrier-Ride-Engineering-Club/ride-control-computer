@@ -5,6 +5,7 @@ import logging
 import threading
 import time
 
+from ride_control_computer.loop_timer import LoopTimer
 from ride_control_computer.motor_controller.MotorController import MotorController
 from ride_control_computer.theming_controller.ThemingController import ThemingController
 from ride_control_computer.webserver.WebserverController import WebserverController
@@ -30,6 +31,7 @@ class RCC:
     __estopSoftwareLatched: bool
 
     __lastTelemPrintTime: float
+    __loopTimer: LoopTimer
     TELEMETRY_PRINT_INTERVAL = 2; # time in s
 
     def __init__(
@@ -48,6 +50,7 @@ class RCC:
         self.__estopSoftwareLatched = False
 
         self.__lastTelemPrintTime = 0
+        self.__loopTimer = LoopTimer()
 
         # Map control panel callbacks
         controlPanel.addDispatchCallback(self.__onDispatch)
@@ -86,6 +89,9 @@ class RCC:
                     self.__checkSafetyConstraints()
 
             self.__printTelemetry()
+
+            self.__loopTimer.tick()
+            time.sleep(0.001)
 
     # =========================================================================
     #                           SAFETY
@@ -220,5 +226,18 @@ class RCC:
             logger.debug(f"[MC Type]: {str(type(self.__motorController))}")
             logger.info(f"[MC Connection Active]: {self.__motorController.isTelemetryStale()}")
             logger.info(f"[MC State]: {self.__motorController.getState()}")
+            lt = self.__loopTimer
+            logger.debug(f"[RCC dt]: {lt.dt * 1000:.2f} ms | avg: {lt.avg * 1000:.2f} ms | p95: {lt.p95 * 1000:.2f} ms")
+            lt.reset()
+
+            cp_lt = self.__controlPanel.loop_timer
+            logger.debug(f"    [ControlPanel dt]:   {cp_lt.dt * 1000:.2f} ms | avg: {cp_lt.avg * 1000:.2f} ms | p95: {cp_lt.p95 * 1000:.2f} ms")
+            cp_lt.reset()
+
+            mc_lt = self.__motorController.loop_timer
+            if mc_lt is not None:
+                logger.debug(f"    [MC dt]:   {mc_lt.dt * 1000:.2f} ms | avg: {mc_lt.avg * 1000:.2f} ms | p95: {mc_lt.p95 * 1000:.2f} ms")
+                mc_lt.reset()
+
             logger.info("===========================================================")
 

@@ -8,4 +8,5 @@ class MockControlPanel(ControlPanel):
 
     def run(self) -> None:
         while (True):
+            self._loop_timer.tick()
             sleep(0.1)
