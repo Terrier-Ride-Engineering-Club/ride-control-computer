@@ -3,7 +3,7 @@
 
 import time
 import logging
-from threading import Thread, Event, Lock, RLock
+from threading import Thread, Event, Lock
 
 from ride_control_computer.motor_controller.MotorController import MotorController, MotorControllerState, MotorTelemetry, ControllerTelemetry
 from ride_control_computer.motor_controller.RoboClaw import RoboClaw
@@ -14,8 +14,9 @@ class RoboClawSerialMotorController(MotorController):
     """
     Implementation of MotorController using a RoboClaw motor controller over serial.
 
-    Runs a background telemetry thread to keep motor state updated without blocking
-    the main control loop.
+    Runs a background serial thread that is the sole owner of all RoboClaw I/O.
+    Public API methods set state and parameters; the serial thread picks them up
+    on its next tick and sends the appropriate commands.
     """
 
     # --- Configuration ---
@@ -24,15 +25,22 @@ class RoboClawSerialMotorController(MotorController):
     JOG_ACCELERATION = 200
     STOP_DECELERATION = 300
     HALT_DECELERATION = 10000
+    STOPPED_THRESHOLD = 5  # QPPS — below this, motors are considered stopped
 
     def __init__(self, roboClaw: RoboClaw):
         super().__init__()
 
         self._roboClaw = roboClaw
 
-        # State
+        # State (written by main thread, read by serial thread)
         self._state = MotorControllerState.DISABLED
-        self._state_lock = RLock()
+
+        # Jog parameters (set by main thread, read by serial thread)
+        self._jog_motor: int = 0
+        self._jog_direction: int = 0
+
+        # Active deceleration (STOP vs HALT)
+        self._active_deceleration: int = self.STOP_DECELERATION
 
         # Telemetry cache
         self._telemetry = ControllerTelemetry()
@@ -40,29 +48,29 @@ class RoboClawSerialMotorController(MotorController):
 
         # Background thread control
         self._stop_event = Event()
-        self._telem_thread: Thread | None = None
+        self._control_thread: Thread | None = None
+
 
     # =========================================================================
     #                           LIFECYCLE
     # =========================================================================
 
     def start(self):
-        """Initialize hardware and start telemetry polling."""
+        """Initialize hardware and start the serial communication thread."""
         logger.info("Starting RoboClawSerialMotorController")
 
         version = self._roboClaw.read_version()
         logger.info(f"Connected to RoboClaw: {version}")
 
-        # Start telemetry thread
+        # Start serial thread
         self._stop_event.clear()
-        self._telem_thread = Thread(
-            target=self._telemetry_loop,
+        self._control_thread = Thread(
+            target=self._control_loop,
             daemon=True,
-            name="RoboClaw-Telemetry"
+            name="RoboClaw-Control"
         )
-        self._telem_thread.start()
-
-        self._set_state(MotorControllerState.IDLE)
+        self._control_thread.start()
+        self._attempt_reset()
 
     def shutdown(self):
         """Stop all motion and clean up."""
@@ -71,11 +79,11 @@ class RoboClawSerialMotorController(MotorController):
         self.haltMotion()
 
         self._stop_event.set()
-        if self._telem_thread:
-            self._telem_thread.join(timeout=1.0)
+        if self._control_thread:
+            self._control_thread.join(timeout=1.0)
 
-        if self._telem_thread is not None and self._telem_thread.is_alive():
-            logger.error("Telemetry thread failed to shutdown. ")
+        if self._control_thread is not None and self._control_thread.is_alive():
+            logger.error("Control thread failed to shutdown.")
 
         self._set_state(MotorControllerState.DISABLED)
 
@@ -84,49 +92,35 @@ class RoboClawSerialMotorController(MotorController):
     # =========================================================================
 
     def startRideSequence(self):
-        with self._state_lock:
-            if self._state != MotorControllerState.IDLE:
-                logger.warning(f"Cannot start sequence from state {self._state}")
-                return
-            
-            self._set_state(MotorControllerState.SEQUENCING)
-        # TODO: Implement ride sequence
+        if self._state != MotorControllerState.IDLE:
+            logger.warning(f"Cannot start sequence from state {self._state}")
+            return
+        self._set_state(MotorControllerState.SEQUENCING)
 
     def home(self):
         self._set_state(MotorControllerState.HOMING)
-        # TODO: Implement homing
 
     def jogMotor(self, motorNumber: int, direction: int):
         if motorNumber not in (1, 2):
             logger.error(f"Invalid motor number: {motorNumber}")
             return False
 
-        with self._state_lock:
-            if self._state not in (MotorControllerState.IDLE, MotorControllerState.JOGGING):
-                logger.debug(f"Cannot jog from state {self._state}")
-                return False
-            
-            self._set_state(MotorControllerState.JOGGING)
+        if self._state not in (MotorControllerState.IDLE, MotorControllerState.JOGGING):
+            logger.debug(f"Cannot jog from state {self._state}")
+            return False
 
-        speed = self.JOG_SPEED if direction > 0 else -self.JOG_SPEED
-        self._roboClaw.set_speed_with_acceleration(motorNumber, speed, self.JOG_ACCELERATION)
-
+        self._jog_motor = motorNumber
+        self._jog_direction = direction
+        self._set_state(MotorControllerState.JOGGING)
         return True
 
     def stopMotion(self):
+        self._active_deceleration = self.STOP_DECELERATION
         self._set_state(MotorControllerState.STOPPING)
 
-        for motor in [1, 2]:
-            self._roboClaw.set_speed_with_acceleration(motor, 0, self.STOP_DECELERATION)
-
-        # TODO: Monitor until stopped, then transition to IDLE
-        self._set_state(MotorControllerState.IDLE)
-
     def haltMotion(self):
-        for motor in [1, 2]:
-            self._roboClaw.set_speed_with_acceleration(motor, 0, self.HALT_DECELERATION)
-
-        self._set_state(MotorControllerState.IDLE)
+        self._active_deceleration = self.HALT_DECELERATION
+        self._set_state(MotorControllerState.STOPPING)
 
     # =========================================================================
     #                           MOTOR TELEMETRY
@@ -208,29 +202,51 @@ class RoboClawSerialMotorController(MotorController):
     # =========================================================================
 
     def getState(self) -> MotorControllerState:
-        with self._state_lock:
-            return self._state
+        return self._state
 
     def _set_state(self, new_state: MotorControllerState):
-        with self._state_lock:
-            if self._state != new_state:
-                logger.info(f"State: {self._state.name} -> {new_state.name}")
-                self._state = new_state
+        if self._state != new_state:
+            logger.info(f"State: {self._state.name} -> {new_state.name}")
+            self._state = new_state
+
+    def _attempt_reset(self):
+        if self.getState() is not MotorControllerState.DISABLED:    return
+        if self.isTelemetryStale():                                 return
+        if self.getControllerStatus() is not "Normal":              return
+        self._set_state(MotorControllerState.IDLE)
 
     # =========================================================================
-    #                           BACKGROUND TELEMETRY
+    #                           CONTROL LOOP
     # =========================================================================
 
-    def _telemetry_loop(self):
+    def _control_loop(self):
         poll_interval = 1.0 / self.POLL_RATE_HZ
 
         while not self._stop_event.is_set():
             try:
+                self._execute_state_action()
                 self._poll_telemetry()
+                self._check_state_transitions()
             except Exception as e:
-                logger.error(f"Telemetry poll failed: {e}")
+                logger.error(f"Control loop error: {e}")
 
             self._stop_event.wait(poll_interval)
+
+    def _execute_state_action(self):
+        """Send the appropriate serial command for the current state."""
+        if self._state == MotorControllerState.JOGGING:
+            speed = self.JOG_SPEED if self._jog_direction > 0 else -self.JOG_SPEED
+            self._roboClaw.set_speed_with_acceleration(self._jog_motor, speed, self.JOG_ACCELERATION)
+        elif self._state == MotorControllerState.STOPPING:
+            for motor in [1, 2]:
+                self._roboClaw.set_speed_with_acceleration(motor, 0, self._active_deceleration)
+
+    def _check_state_transitions(self):
+        """Check if the current state should transition."""
+        if self._state == MotorControllerState.STOPPING:
+            s1, s2 = self.getMotorSpeeds()
+            if abs(s1) < self.STOPPED_THRESHOLD and abs(s2) < self.STOPPED_THRESHOLD:
+                self._set_state(MotorControllerState.IDLE)
 
     def _poll_telemetry(self):
         pollingStartTime = time.time()
