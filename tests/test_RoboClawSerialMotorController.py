@@ -1,6 +1,7 @@
 import time
 import threading
 from unittest.mock import patch, MagicMock
+from ride_control_computer.motor_controller.MotorController import MotorControllerState
 from ride_control_computer.motor_controller.RoboClaw import RoboClaw
 from ride_control_computer.motor_controller.RoboClawSerialMC import RoboClawSerialMotorController
 
@@ -57,3 +58,53 @@ class TestRoboClawSerialMotorController():
             # Release the blocked poll thread so shutdown doesn't hang
             pollBarrier.set()
             controller.shutdown()
+
+    def testStartupHappyPath(self):
+        with patch(
+                "ride_control_computer.motor_controller.RoboClawSerialMC.RoboClaw"
+        ) as mockCls:
+            roboClaw = _configureDefaultMock(mockCls)
+            controller = RoboClawSerialMotorController(roboClaw)
+            controller.start()
+            time.sleep(0.05)
+            assert controller.getState() is MotorControllerState.IDLE
+
+    def testStartupEStop(self):
+        with patch(
+                "ride_control_computer.motor_controller.RoboClawSerialMC.RoboClaw"
+        ) as mockCls:
+            roboClaw = _configureDefaultMock(mockCls)
+            roboClaw.read_status.return_value = "E-Stop"
+            controller = RoboClawSerialMotorController(roboClaw)
+            controller.start()
+            assert controller.getState() is MotorControllerState.DISABLED
+            time.sleep(0.05)
+            assert controller.getState() is MotorControllerState.DISABLED
+            time.sleep(1)
+            assert controller.getState() is MotorControllerState.DISABLED\
+
+    def testRideSequenceLifecycle(self):
+        with patch(
+                "ride_control_computer.motor_controller.RoboClawSerialMC.RoboClaw"
+        ) as mockCls:
+            roboClaw = _configureDefaultMock(mockCls)
+            controller = RoboClawSerialMotorController(roboClaw)
+            controller.start()
+            controller.startRideSequence()
+            assert controller.getState() is MotorControllerState.SEQUENCING
+
+            # Test triggering E-Stop mid sequence
+            controller.stopMotion()
+            assert controller.getState() is MotorControllerState.STOPPING
+
+            # Mock motor stopping, make sure MC -> idle.
+            roboClaw.read_encoder_speed.side_effect = lambda m: {
+                "speed": 100, "direction": "Forward",
+            }
+            time.sleep(0.5)
+            assert controller.getState() is MotorControllerState.STOPPING
+            roboClaw.read_encoder_speed.side_effect = lambda m: {
+                "speed": 0.5, "direction": "Forward",
+            }
+            time.sleep(0.5)
+            assert controller.getState() is MotorControllerState.IDLE
