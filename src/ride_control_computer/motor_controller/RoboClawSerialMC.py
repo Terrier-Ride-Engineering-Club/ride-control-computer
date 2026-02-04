@@ -163,6 +163,10 @@ class RoboClawSerialMotorController(MotorController):
                 self._telemetry.motors[2].current
             )
 
+    @property
+    def loopTimer(self):
+        return self._loop_timer
+
     # =========================================================================
     #                           CONTROLLER TELEMETRY
     # =========================================================================
@@ -204,10 +208,6 @@ class RoboClawSerialMotorController(MotorController):
     # =========================================================================
     #                           STATE
     # =========================================================================
-
-    @property
-    def loop_timer(self) -> LoopTimer:
-        return self._loop_timer
 
     def getState(self) -> MotorControllerState:
         return self._state
