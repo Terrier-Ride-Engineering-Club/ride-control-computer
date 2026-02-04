@@ -3,7 +3,7 @@
 
 import logging
 import time
-import datetime
+from datetime import datetime
 
 from ride_control_computer.RCC import RCC
 from ride_control_computer.motor_controller.MockMotorController import MockMotorController
@@ -22,7 +22,8 @@ HOW TO RUN THIS PROJECT:
 """
 # SETUP LOGGING
 LOG_FORMAT = "%(asctime)s %(levelname)s [%(name)s]: %(message)s"
-LOG_FILE = f"./logs/RCC_Log [{datetime.datetime.now()}]"
+ts = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+LOG_FILE = f"./logs/RCC_Log_{ts}.log"
 logging.basicConfig(
     level=logging.DEBUG,
     format=LOG_FORMAT,
