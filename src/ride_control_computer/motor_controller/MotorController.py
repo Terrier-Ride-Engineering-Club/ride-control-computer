@@ -219,7 +219,7 @@ class MotorController(ABC):
 
     @property
     def loop_timer(self) -> Optional[LoopTimer]:
-        """Returns the telemetry loop timer, or None if not applicable."""
+        """Returns the telemetry loop timer, or None if not implemented by child."""
         return None
 
     def getState(self) -> MotorControllerState:

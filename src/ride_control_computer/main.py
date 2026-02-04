@@ -34,7 +34,7 @@ logging.basicConfig(
     handlers=[logging.FileHandler(LOG_FILE)])  # Log to a file
 console_handler = logging.StreamHandler()
 console_handler.setFormatter(logging.Formatter(LOG_FORMAT))
-console_handler.setLevel(logging.INFO)
+console_handler.setLevel(logging.DEBUG)
 logging.getLogger().addHandler(console_handler)  # Log to the console (INFO or higher)
 
 def main(): 
