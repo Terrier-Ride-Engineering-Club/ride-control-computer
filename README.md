@@ -13,6 +13,7 @@ ride_control_computer/
 ├── motor_controller/      # Motor control (RoboClaw, Mock)
 ├── control_panel/         # Operator inputs (Mock)
 ├── theming_controller/    # Show control (Mock)
+└── webserver/             # Status dashboard (Flask, Mock)
 ```
 Each subsystem has an abstract interface (ABC) and a Mock implementation for testing w/o hardware.
 
