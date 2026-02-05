@@ -6,8 +6,8 @@ from ride_control_computer.motor_controller.MockMotorController import MockMotor
 
 class MockWebserverController(WebserverController):
 
-    def __init__(self, getSpeeds, getState, startTheming, stopTheming, themeStatus):
-        super().__init__(getSpeeds,getState, startTheming, stopTheming, themeStatus)
+    def __init__(self, getSpeeds, getState, startTheming, stopTheming, themeStatus, getPositions):
+        super().__init__(getSpeeds,getState, startTheming, stopTheming, themeStatus, getPositions)
 
     def start(self):
         #Motor information:
@@ -22,15 +22,89 @@ class MockWebserverController(WebserverController):
         def one():
             speed = self.getSpeed()
             state = self.getState()
-            html = """
-                <h1 style='text-align:center;'>speed = {{ speed }}, state = {{ state }}</h2>
-                <div style="text-align:center; margin-top:20px;">
-                    <a href="/one"><button style="padding: 12px 24px; font-size:18px;"}><b>One</b></button></a>
-                    <a href="/two"><button style="padding: 12px 24px; font-size:18px;"}>Two</button></a>
-                    <a href="/three"><button style="padding: 12px 24px; font-size:18px;"}>Three</button></a>
-                </div>"""
-            return render_template_string(html, speed=speed, state=state)
+            positions = self.getPositions()  # e.g. (5, 8)
 
+            # convert 0–10 → percentage height
+            line1 = positions[0] * 10
+            line2 = positions[1] * 10
+
+            html = """
+            <html>
+            <head>
+                <style>
+                    .bars-container {
+                        display: flex;
+                        justify-content: center;
+                        gap: 50px;
+                        margin-top: 30px;
+                    }
+
+                    .bar-wrapper {
+                        position: relative;
+                        width: 50px;
+                        height: 200px;
+                        border: 2px solid #333;
+                        background: #f5f5f5;
+                    }
+
+                    .marker-line {
+                        position: absolute;
+                        left: 0;
+                        width: 100%;
+                        height: 3px;
+                        background: red;
+                        transform: translateY(50%);
+                    }
+
+                    .bar-label {
+                        text-align: center;
+                        margin-top: 10px;
+                        font-size: 16px;
+                    }
+                </style>
+            </head>
+            <body>
+
+                <div style="text-align:center">
+                    <h1>speed = {{ speed }}</h1>
+                    <h1>state = {{ state }}</h1>
+                    <h1>positions = {{ positions }}</h1>
+
+                    <div class="bars-container">
+                        <div>
+                            <div class="bar-wrapper">
+                                <div class="marker-line" style="bottom: {{ line1 }}%;"></div>
+                            </div>
+                            <div class="bar-label">Car 1</div>
+                        </div>
+
+                        <div>
+                            <div class="bar-wrapper">
+                                <div class="marker-line" style="bottom: {{ line2 }}%;"></div>
+                            </div>
+                            <div class="bar-label">Car 2</div>
+                        </div>
+                    </div>
+
+                    <div style="text-align:center; margin-top:30px;">
+                        <a href="/one"><button style="padding: 12px 24px; font-size:18px;"><b>One</b></button></a>
+                        <a href="/two"><button style="padding: 12px 24px; font-size:18px;">Two</button></a>
+                        <a href="/three"><button style="padding: 12px 24px; font-size:18px;">Three</button></a>
+                    </div>
+                </div>
+
+            </body>
+            </html>
+            """
+
+            return render_template_string(
+                html,
+                speed=speed,
+                state=state,
+                positions=positions,
+                line1=line1,
+                line2=line2
+            )
         @self.app.route('/two')
         def two():
             time_list = [1, 2, 3, 4, 5]

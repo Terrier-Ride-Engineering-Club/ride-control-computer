@@ -12,7 +12,8 @@ class WebserverController(ABC):
                  getState: Callable[[], MotorControllerState],
                  startTheming: Callable[[], None],
                  stopTheming: Callable[[], None],
-                 themeStatus: Callable[[], str]
+                 themeStatus: Callable[[], str],
+                 getPositions: Callable[[], tuple[int, int]]
                  ):
         self.app = Flask(__name__)
         self.getSpeed = getSpeeds
@@ -20,6 +21,7 @@ class WebserverController(ABC):
         self.startTheming = startTheming
         self.stopTheming = stopTheming
         self.themeStatus = themeStatus
+        self.getPositions = getPositions
 
     def start(self):
         @self.app.route('/')
