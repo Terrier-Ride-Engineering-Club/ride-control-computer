@@ -17,4 +17,8 @@ class ThemingController(ABC):
     def stopShow(self):
         """Called by the Theming Controller owner to signal that the ride sequence has stopped."""
         ...
-    
+
+    @abstractmethod
+    def getStatus(self) -> str:
+        """called by the Theming Controller owner to get the current status of the theming sequence"""
+        ...

@@ -12,7 +12,7 @@ class WebserverController(ABC):
                  getState: Callable[[], MotorControllerState],
                  startTheming: Callable[[], None],
                  stopTheming: Callable[[], None],
-                 themeStatus: Callable[[], None]
+                 themeStatus: Callable[[], str]
                  ):
         self.app = Flask(__name__)
         self.getSpeed = getSpeeds
@@ -41,5 +41,15 @@ class WebserverController(ABC):
         def three():
             """code for page three that shows design info"""
             ...
+        @self.app.route("/start-theming", methods=["POST"])
+        def start_theming():
+            """code to start theming - redirect to page three"""
+            ...
+
+        @self.app.route("/stop-theming", methods=["POST"])
+        def stop_theming():
+            """code to stop theming - redirect to page three"""
+            ...
+
         self.app.run(debug=False)
 

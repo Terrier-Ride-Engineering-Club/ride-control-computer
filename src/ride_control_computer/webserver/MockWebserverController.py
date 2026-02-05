@@ -1,6 +1,8 @@
+from ride_control_computer.theming_controller.MockThemeingController import MockThemingController
 from ride_control_computer.webserver.WebserverController import WebserverController
-from flask import Flask, render_template_string
+from flask import *
 from waitress import serve
+from ride_control_computer.motor_controller.MockMotorController import MockMotorController
 
 class MockWebserverController(WebserverController):
 
@@ -77,15 +79,32 @@ class MockWebserverController(WebserverController):
             """
             return render_template_string(html, data=data)
 
+
+        @self.app.route("/start-theming", methods=["POST"])
+        def start_theming():
+            self.startTheming()
+            return redirect(url_for("three"))
+
+        @self.app.route("/stop-theming", methods=["POST"])
+        def stop_theming():
+            self.stopTheming()
+            return redirect(url_for("three"))
+
         @self.app.route('/three')
         def three():
-            status = self.themeStatus
+            status = self.themeStatus()
             html = """
             <body style=\"text-align:center;\">
                 <h1> Theming controls </h1>
                 <h2> Status: {{ status }} </h2>
-                <button style="padding: 12px 24px; font-size:18px;" name="Start" onclick="self.startTheming()">Start</button>
-                <button style="padding: 12px 24px; font-size:18px;" name="Stop" onclick="self.stopTheming()">Stop</button>
+                <div style= "display: flex; justify-content: center; gap: 12px; margin-top: 20px;">
+                    <form action="/start-theming" method="post">
+                        <button style="padding: 12px 24px; font-size:18px;">Start</button>
+                    </form>
+                    <form action="/stop-theming" method="post">
+                        <button style="padding: 12px 24px; font-size:18px;">Stop</button>
+                    </form>
+                </div>
             </body>
             <div style="text-align:center; margin-top:20px;">
                     <a href="/one"><button style="padding: 12px 24px; font-size:18px;"}>One</button></a>
