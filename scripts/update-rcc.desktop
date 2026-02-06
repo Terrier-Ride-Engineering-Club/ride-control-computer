@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Update RCC
+Comment=Pull latest RCC code from GitHub
+Exec=lxterminal -e /opt/rcc/scripts/update-rcc.sh
+Icon=system-software-update
+Terminal=false
+Categories=Utility;

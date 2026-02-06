@@ -1,0 +1,14 @@
+[Unit]
+Description=Ride Control Computer
+After=network.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/opt/rcc
+ExecStart=/opt/rcc/.venv/bin/rcc
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
