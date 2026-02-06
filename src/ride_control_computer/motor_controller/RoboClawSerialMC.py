@@ -71,7 +71,7 @@ class RoboClawSerialMotorController(MotorController):
         self._control_thread = Thread(
             target=self._control_loop,
             daemon=True,
-            name="RoboClaw-Control"
+            name="RoboClawSerial"
         )
         self._control_thread.start()
         self._attempt_reset()

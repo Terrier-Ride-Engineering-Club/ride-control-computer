@@ -70,13 +70,13 @@ class RCC:
         threading.Thread(
             target=self.__controlPanel.run,
             daemon=True,
-            name="ControlPanel"
+            name="ControlPanelListener"
             ).start()
 
         threading.Thread(
             target=self.__webserverController.start,
             daemon=True,
-            name="Webserver"
+            name="WebserverMainThread"
             ).start()
 
         self.__motorController.start()
