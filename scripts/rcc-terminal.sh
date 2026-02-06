@@ -2,9 +2,6 @@
 # RCC Terminal Script
 # Runs RCC in terminal without Chromium (for debugging)
 
-# Ignore SIGINT so Ctrl+C only stops RCC, not this script
-trap '' INT
-
 cd /opt/rcc
 
 # Try to update from git
@@ -27,7 +24,13 @@ fi
 
 echo ""
 echo "Starting RCC..."
-.venv/bin/rcc --hardware
+
+# Run RCC in background and wait for it
+# Trap Ctrl+C to kill RCC but continue script
+.venv/bin/rcc --hardware &
+RCC_PID=$!
+trap "kill $RCC_PID 2>/dev/null" INT
+wait $RCC_PID
 
 echo ""
 echo "RCC exited. Press Enter to close..."
