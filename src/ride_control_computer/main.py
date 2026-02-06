@@ -6,6 +6,8 @@ import logging
 from datetime import datetime
 from pathlib import Path
 
+import serial.serialutil
+
 from ride_control_computer.RCC import RCC
 from ride_control_computer.motor_controller.MockMotorController import MockMotorController
 from ride_control_computer.control_panel.MockControlPanel import MockControlPanel
@@ -43,7 +45,14 @@ def main():
         from ride_control_computer.motor_controller.RoboClaw import RoboClaw
         from ride_control_computer.motor_controller.RoboClawSerialMC import RoboClawSerialMotorController
 
-        roboclaw = RoboClaw()
+        # attempt to open roboclaw on default or fallback port.
+        roboclaw: RoboClaw
+        try:
+            roboclaw = RoboClaw() # default port
+        except serial.serialutil.SerialException:
+            roboclaw = RoboClaw(port='/dev/ttyACM0') # fallback (via usb on pi)
+        logger.debug(f"Roboclaw init on default port: {roboclaw.port.name}")
+
         mc = RoboClawSerialMotorController(roboclaw)
         # TODO: Add hardware ControlPanel when implemented
         cp = MockControlPanel()
