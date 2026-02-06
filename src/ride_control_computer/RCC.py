@@ -235,8 +235,7 @@ class RCC:
             logger.info(f"[MC State]: {self.__motorController.getState()}")
             lt = self.__loopTimer
             thread_names = [t.name for t in threading.enumerate()]
-            logger.debug(f"[RCC dt]: {lt.dt * 1000:.2f} ms | avg: {lt.avg * 1000:.2f} ms | p95: {lt.p95 * 1000:.2f} ms. "
-                         f"Alive threads ({threading.active_count()}): {thread_names}")
+            logger.debug(f"[RCC dt]: {lt.dt * 1000:.2f} ms | avg: {lt.avg * 1000:.2f} ms | p95: {lt.p95 * 1000:.2f} ms. ")
             lt.reset()
 
             cp_lt = self.__controlPanel.loopTimer
@@ -247,6 +246,8 @@ class RCC:
             if mc_lt is not None:
                 logger.debug(f"    [MC dt]:   {mc_lt.dt * 1000:.2f} ms | avg: {mc_lt.avg * 1000:.2f} ms | p95: {mc_lt.p95 * 1000:.2f} ms")
                 mc_lt.reset()
+
+            logger.debug(    f"Alive threads ({threading.active_count()}): {thread_names}")
 
             logger.info("===========================================================")
 
