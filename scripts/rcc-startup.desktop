@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=RCC Startup
+Comment=Start RCC with kiosk mode prompt
+Exec=lxterminal -e /opt/rcc/scripts/rcc-startup.sh
+Icon=system-run
+Terminal=false
+Categories=Utility;

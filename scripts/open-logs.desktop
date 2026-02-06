@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=RCC Logs
+Comment=Open RCC log files
+Exec=/opt/rcc/scripts/open-logs.sh
+Icon=folder-documents
+Terminal=false
+Categories=Utility;
