@@ -224,7 +224,7 @@ class RCC:
             logger.info("======================== Telemetry ========================")
             logger.info(f"[E-Stop Software Latched]: {self.__estopSoftwareLatched}")
             logger.debug(f"[MC Type]: {str(type(self.__motorController))}")
-            logger.info(f"[MC Connection Active]: {self.__motorController.isTelemetryStale()}")
+            logger.info(f"[MC Connection]: {"HEALTHY" if self.__motorController.isTelemetryStale() else "DEAD"}")
             logger.info(f"[MC State]: {self.__motorController.getState()}")
             lt = self.__loopTimer
             logger.debug(f"[RCC dt]: {lt.dt * 1000:.2f} ms | avg: {lt.avg * 1000:.2f} ms | p95: {lt.p95 * 1000:.2f} ms")
