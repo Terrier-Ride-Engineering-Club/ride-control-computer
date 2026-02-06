@@ -27,13 +27,85 @@ Electrical Lead: Jackson Justus (jackjust@bu.edu) <br>
 Mechanical Lead: Daniel Ulrich (dculrich@bu.edu) <br>
 Design Lead: Jon Chuang (chuangj@bu.edu) <br>
 
-## Building Requirements <br>
-Python 3.14.0
-Raspberry Pi 5 (or compatible system). <br>
-Dependencies listed in requirements.txt
+## Requirements
+- Python 3.14
+- Raspberry Pi 5 (production) or macOS/Windows/Linux (development)
 
-## Building Instructions <br>
-This project uses a standard python build structure. <br>
-The instructions for building on MacOS/Linux are listed below. <br>
-`python3.14 -m venv .venv` to create virtual environment. <br>
-`pip install -r ./requirements.txt` to install dependencies. <br>
+## Installation
+
+### macOS / Linux
+```bash
+# Create and activate virtual environment
+python3 -m venv .venv
+source .venv/bin/activate
+
+# Install the package and dependencies
+pip install -e .
+
+# Or with dev tools (pytest, ruff, black)
+pip install -e ".[dev]"
+```
+
+### Windows
+```powershell
+# Create and activate virtual environment
+python -m venv .venv
+.venv\Scripts\activate
+
+# Install the package and dependencies
+pip install -e .
+
+# Or with dev tools (pytest, ruff, black)
+pip install -e ".[dev]"
+```
+
+### Running
+```bash
+rcc             # Uses mock implementations (default, safe for development)
+rcc --hardware  # Uses hardware implementations (Pi deployment)
+```
+
+### Running Tests
+```bash
+pytest
+```
+
+## Deployment (Raspberry Pi)
+
+### Install
+```bash
+# Clone to /opt/rcc
+sudo mkdir -p /opt/rcc
+sudo chown $USER:$USER /opt/rcc
+git clone https://github.com/Terrier-Ride-Engineering-Club/ride-control-computer.git /opt/rcc
+
+# Create venv and install
+cd /opt/rcc
+python3 -m venv .venv
+.venv/bin/pip install .
+```
+
+### Kiosk Mode Setup
+On boot, shows a 5-second prompt. Press any key for desktop, otherwise launches Chrome kiosk with the RCC webserver.
+
+```bash
+# Make scripts executable
+chmod +x /opt/rcc/scripts/*.sh
+```
+
+**Option A: Desktop Auto-Login (GUI)**
+```bash
+mkdir -p ~/.config/autostart
+cp /opt/rcc/scripts/rcc-boot.desktop ~/.config/autostart/
+```
+
+**Option B: Console Auto-Login (headless)**
+```bash
+sudo raspi-config
+# Navigate: System Options → Boot / Auto Login → Console Autologin
+
+# Add startup script to bashrc (only if not already present)
+grep -qxF '/opt/rcc/scripts/rcc-boot.sh' ~/.bashrc || echo '/opt/rcc/scripts/rcc-boot.sh' >> ~/.bashrc
+```
+
+Reboot to test.

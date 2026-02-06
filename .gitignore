@@ -8,4 +8,5 @@ ride-control-computer.code-workspace
 /.venv
 *.DS_Store
 /.idea
-/logs
+logs/*
+!logs/.gitkeep
