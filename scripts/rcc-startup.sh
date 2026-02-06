@@ -22,8 +22,8 @@ else
     echo ""
     echo "Starting RCC in kiosk mode..."
 
-    # Start the RCC service
-    /opt/rcc/.venv/bin/rcc &
+    # Start the RCC service with hardware implementations
+    /opt/rcc/.venv/bin/rcc --hardware &
     RCC_PID=$!
 
     # Wait for webserver to be ready

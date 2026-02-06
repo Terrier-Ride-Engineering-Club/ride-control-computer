@@ -50,9 +50,9 @@ pip install -e ".[dev]"
 ```
 
 ### Running
-After installation, run the application with:
 ```bash
-rcc
+rcc             # Uses mock implementations (default, safe for development)
+rcc --hardware  # Uses hardware implementations (Pi deployment)
 ```
 
 ### Running Tests
@@ -75,52 +75,19 @@ python3 -m venv .venv
 .venv/bin/pip install .
 ```
 
-### Option A: Kiosk Mode (recommended for production)
+### Kiosk Mode Setup
 On boot, shows a 5-second prompt. Press any key for desktop, otherwise launches Chrome kiosk with the RCC webserver.
 
 ```bash
 # Make startup script executable
 chmod +x /opt/rcc/scripts/rcc-startup.sh
-```
 
-**If using Console Auto-Login:**
-```bash
+# Configure console auto-login
 sudo raspi-config
 # Navigate: System Options → Boot / Auto Login → Console Autologin
 
-# Add to ~/.bashrc
+# Add startup script to bashrc
 echo '/opt/rcc/scripts/rcc-startup.sh' >> ~/.bashrc
 ```
 
-**If using Desktop Auto-Login (Raspberry Pi OS with desktop):**
-```bash
-# Create autostart directory if needed
-mkdir -p ~/.config/autostart
-
-# Create desktop entry
-cat > ~/.config/autostart/rcc.desktop << 'EOF'
-[Desktop Entry]
-Type=Application
-Name=RCC Startup
-Exec=lxterminal -e /opt/rcc/scripts/rcc-startup.sh
-EOF
-```
-
-### Option B: Background Service (headless)
-Runs RCC as a background service without display.
-
-```bash
-# Copy service file and enable
-sudo cp rcc.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable rcc
-sudo systemctl start rcc
-```
-
-### Manage the service (Option B)
-```bash
-sudo systemctl status rcc   # Check status
-sudo systemctl stop rcc     # Stop
-sudo systemctl restart rcc  # Restart
-journalctl -u rcc -f        # View logs
-```
+Reboot to test.
