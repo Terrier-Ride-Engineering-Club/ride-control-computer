@@ -1,5 +1,5 @@
 #!/bin/bash
-# RCC Startup Script
+# RCC Boot Script
 # Shows a prompt, then either boots to desktop or kiosk mode
 
 TIMEOUT=5
@@ -20,10 +20,31 @@ if read -n 1 -t $TIMEOUT; then
     startx
 else
     echo ""
+    cd /opt/rcc
+
+    # Try to update from git
+    echo "Checking for updates..."
+    PULL_OUTPUT=$(git pull 2>&1)
+    PULL_STATUS=$?
+
+    if [ $PULL_STATUS -eq 0 ]; then
+        if echo "$PULL_OUTPUT" | grep -q "Already up to date"; then
+            echo "Already up to date."
+        else
+            echo "Updates found, reinstalling..."
+            echo "$PULL_OUTPUT"
+            .venv/bin/pip install . --quiet
+            echo "Reinstall complete."
+        fi
+    else
+        echo "Git pull failed (no network?), continuing with current version."
+    fi
+
+    echo ""
     echo "Starting RCC in kiosk mode..."
 
     # Start the RCC service with hardware implementations
-    /opt/rcc/.venv/bin/rcc --hardware &
+    .venv/bin/rcc --hardware &
     RCC_PID=$!
 
     # Wait for webserver to be ready
@@ -42,7 +63,7 @@ else
         --check-for-update-interval=31536000 \
         "$WEBSERVER_URL"
 
-    # If Chrome exits, stop RCC
+    # If Chromium exits, stop RCC
     kill $RCC_PID 2>/dev/null
 
     echo ""

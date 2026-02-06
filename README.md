@@ -90,14 +90,14 @@ On boot, shows a 5-second prompt. Press any key for desktop, otherwise launches 
 
 ```bash
 # Make startup script executable
-chmod +x /opt/rcc/scripts/rcc-startup.sh
+chmod +x /opt/rcc/scripts/rcc-boot.sh
 
 # Configure console auto-login
 sudo raspi-config
 # Navigate: System Options → Boot / Auto Login → Console Autologin
 
 # Add startup script to bashrc (only if not already present)
-grep -qxF '/opt/rcc/scripts/rcc-startup.sh' ~/.bashrc || echo '/opt/rcc/scripts/rcc-startup.sh' >> ~/.bashrc
+grep -qxF '/opt/rcc/scripts/rcc-boot.sh' ~/.bashrc || echo '/opt/rcc/scripts/rcc-boot.sh' >> ~/.bashrc
 ```
 
 Reboot to test.

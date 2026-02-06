@@ -1,5 +1,6 @@
 #!/bin/bash
-# Start RCC manually
+# RCC Terminal Script
+# Runs RCC in terminal without Chromium (for debugging)
 
 cd /opt/rcc
 

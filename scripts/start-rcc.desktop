@@ -1,8 +1,0 @@
-[Desktop Entry]
-Type=Application
-Name=Start RCC
-Comment=Start Ride Control Computer
-Exec=lxterminal -e /opt/rcc/scripts/start-rcc.sh
-Icon=system-run
-Terminal=false
-Categories=Utility;
