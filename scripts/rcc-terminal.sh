@@ -2,6 +2,9 @@
 # RCC Terminal Script
 # Runs RCC in terminal without Chromium (for debugging)
 
+# Ignore SIGINT so Ctrl+C only stops RCC, not this script
+trap '' INT
+
 cd /opt/rcc
 
 # Try to update from git
