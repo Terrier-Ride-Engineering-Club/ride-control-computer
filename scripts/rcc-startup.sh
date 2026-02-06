@@ -41,4 +41,8 @@ else
 
     # If Chrome exits, stop RCC
     kill $RCC_PID 2>/dev/null
+
+    echo ""
+    echo "Kiosk exited. Press Enter to close..."
+    read
 fi
