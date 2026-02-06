@@ -21,7 +21,8 @@ class RoboClawSerialMotorController(MotorController):
     """
 
     # --- Configuration ---
-    POLL_RATE_HZ = 50
+    WRITE_RATE_HZ = 200      # command writes (jog, stop, etc.)
+    READ_RATE_HZ = 20        # telemetry reads (status, voltage, encoders, etc.)
     JOG_SPEED = 500
     JOG_ACCELERATION = 200
     STOP_DECELERATION = 300
@@ -202,7 +203,7 @@ class RoboClawSerialMotorController(MotorController):
 
     def isTelemetryStale(self, maxAgeSeconds: float | None = None):
         if maxAgeSeconds is None:
-            maxAgeSeconds = self.STALE_THRESHOLD_MULTIPLIER / self.POLL_RATE_HZ
+            maxAgeSeconds = self.STALE_THRESHOLD_MULTIPLIER / self.READ_RATE_HZ
         return self.getTelemetryAge() > maxAgeSeconds
 
     # =========================================================================
@@ -228,18 +229,33 @@ class RoboClawSerialMotorController(MotorController):
     # =========================================================================
 
     def _control_loop(self):
-        poll_interval = 1.0 / self.POLL_RATE_HZ
+        write_interval = 1.0 / self.WRITE_RATE_HZ
+        read_interval = 1.0 / self.READ_RATE_HZ
+        loop_interval = min(write_interval, read_interval)
+
+        last_write = 0.0
+        last_read = 0.0
 
         while not self._stop_event.is_set():
             self._loop_timer.tick()
+            now = time.monotonic()
+
             try:
-                self._execute_state_action()
-                self._poll_telemetry()
-                self._check_state_transitions()
+                if now - last_write >= write_interval:
+                    last_write = now
+                    self._execute_state_action()
+
+                if now - last_read >= read_interval:
+                    last_read = now
+                    self._poll_telemetry()
+                    self._check_state_transitions()
             except Exception as e:
                 logger.error(f"Control loop error: {e}")
 
-            self._stop_event.wait(poll_interval)
+            elapsed = time.monotonic() - now
+            sleep_time = loop_interval - elapsed
+            if sleep_time > 0:
+                self._stop_event.wait(sleep_time)
 
     def _execute_state_action(self):
         """Send the appropriate serial command for the current state."""
