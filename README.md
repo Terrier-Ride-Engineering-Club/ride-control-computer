@@ -1,11 +1,21 @@
-# Ride Control Computer (RCC) 2024-2025
+# Ride Control Computer (RCC) 2025-2026
 This repo hosts all of the code and files related to Terrier Ride Engineering Club's (TREC) Ride Control Computer (RCC) project for the Ride Engineering Competition (REC) 25-26 season.
 
 ## About the Project
-- TODO
+The RCC is a Raspberry Pi-based control system for an amusement ride, built for the Ride Engineering Competition. It coordinates motor control, safety monitoring, operator controls, and theming elements to safely operate a ride from dispatch through cycle completion.
 
-## Key Features
-- TODO
+## Structure
+```
+ride_control_computer/
+├── RCC.py                 # Main controller, safety logic, state machine
+├── main.py                # Entry point, logging setup
+├── loop_timer.py          # Timing utility
+├── motor_controller/      # Motor control (RoboClaw, Mock)
+├── control_panel/         # Operator inputs (Mock)
+├── theming_controller/    # Show control (Mock)
+└── webserver/             # Status dashboard (Flask, Mock)
+```
+Each subsystem has an abstract interface (ABC) and a Mock implementation for testing w/o hardware.
 
 ## Credits
 __Project Credits:__ <br>
