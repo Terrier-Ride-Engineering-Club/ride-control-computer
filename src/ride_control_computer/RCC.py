@@ -69,12 +69,14 @@ class RCC:
 
         threading.Thread(
             target=self.__controlPanel.run,
-            daemon=True
+            daemon=True,
+            name="ControlPanel"
             ).start()
 
         threading.Thread(
             target=self.__webserverController.start,
-            daemon=True
+            daemon=True,
+            name="Webserver"
             ).start()
 
         self.__motorController.start()
@@ -232,8 +234,9 @@ class RCC:
             logger.info(f"[MC Connection]: {mcStatus}")
             logger.info(f"[MC State]: {self.__motorController.getState()}")
             lt = self.__loopTimer
+            thread_names = [t.name for t in threading.enumerate()]
             logger.debug(f"[RCC dt]: {lt.dt * 1000:.2f} ms | avg: {lt.avg * 1000:.2f} ms | p95: {lt.p95 * 1000:.2f} ms. "
-                         f"Alive threads: {threading.active_count()}")
+                         f"Alive threads ({threading.active_count()}): {thread_names}")
             lt.reset()
 
             cp_lt = self.__controlPanel.loopTimer
