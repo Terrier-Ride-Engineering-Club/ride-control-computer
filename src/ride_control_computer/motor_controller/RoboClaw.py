@@ -33,7 +33,7 @@ class RoboClaw:
     and the hardware RoboClaw. Abstracts the specifics of the RoboClaw's serial protocol.
     """
     def __init__(self, port='/dev/ttyAMA1', address=0x80, auto_recover=False, **kwargs):
-        self.port = serial.Serial(baudrate=38400, timeout=0.1, interCharTimeout=0.01)
+        self.port = serial.Serial(baudrate=115200, timeout=0.1, interCharTimeout=0.01)
         self.port.port = port
         self.address = address
         self.serial_lock = Lock()
