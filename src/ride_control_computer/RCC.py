@@ -219,12 +219,13 @@ class RCC:
         elapsed = time.monotonic() - self.__lastTelemPrintTime
         if elapsed >= self.TELEMETRY_PRINT_INTERVAL:
             self.__lastTelemPrintTime = time.monotonic()
+            mcStatus = "DEAD" if self.__motorController.isTelemetryStale() else "HEALTHY"
 
             # Print telemetry data
             logger.info("======================== Telemetry ========================")
             logger.info(f"[E-Stop Software Latched]: {self.__estopSoftwareLatched}")
             logger.debug(f"[MC Type]: {str(type(self.__motorController))}")
-            logger.info(f"[MC Connection]: {"DEAD" if self.__motorController.isTelemetryStale() else "HEALTHY"}")
+            logger.info(f"[MC Connection]: {mcStatus}")
             logger.info(f"[MC State]: {self.__motorController.getState()}")
             lt = self.__loopTimer
             logger.debug(f"[RCC dt]: {lt.dt * 1000:.2f} ms | avg: {lt.avg * 1000:.2f} ms | p95: {lt.p95 * 1000:.2f} ms")
