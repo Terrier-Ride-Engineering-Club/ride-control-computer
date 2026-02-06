@@ -220,7 +220,7 @@ class RoboClawSerialMotorController(MotorController):
     def _attempt_reset(self):
         if self.getState() is not MotorControllerState.DISABLED:    return
         if self.isTelemetryStale():                                 return
-        if self.getControllerStatus() is not "Normal":              return
+        if self.getControllerStatus() !=     "Normal":              return
         self._set_state(MotorControllerState.IDLE)
 
     # =========================================================================
