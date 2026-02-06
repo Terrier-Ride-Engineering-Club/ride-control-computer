@@ -2,7 +2,7 @@
 Type=Application
 Name=RCC Boot
 Comment=Start RCC with kiosk mode prompt
-Exec=lxterminal -e /opt/rcc/scripts/rcc-boot.sh
+Exec=lxterminal --geometry=999x999 -e /opt/rcc/scripts/rcc-boot.sh
 Icon=system-run
 Terminal=false
 Categories=Utility;
