@@ -31,7 +31,7 @@ else
     sleep 3
 
     # Start Chromium in kiosk mode
-    chromium-browser \
+    chromium \
         --kiosk \
         --noerrdialogs \
         --disable-infobars \

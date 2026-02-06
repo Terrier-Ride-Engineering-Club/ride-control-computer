@@ -81,13 +81,29 @@ On boot, shows a 5-second prompt. Press any key for desktop, otherwise launches 
 ```bash
 # Make startup script executable
 chmod +x /opt/rcc/scripts/rcc-startup.sh
+```
 
-# Configure auto-login to console via raspi-config
+**If using Console Auto-Login:**
+```bash
 sudo raspi-config
 # Navigate: System Options → Boot / Auto Login → Console Autologin
 
-# Add to end of ~/.bashrc
+# Add to ~/.bashrc
 echo '/opt/rcc/scripts/rcc-startup.sh' >> ~/.bashrc
+```
+
+**If using Desktop Auto-Login (Raspberry Pi OS with desktop):**
+```bash
+# Create autostart directory if needed
+mkdir -p ~/.config/autostart
+
+# Create desktop entry
+cat > ~/.config/autostart/rcc.desktop << 'EOF'
+[Desktop Entry]
+Type=Application
+Name=RCC Startup
+Exec=lxterminal -e /opt/rcc/scripts/rcc-startup.sh
+EOF
 ```
 
 ### Option B: Background Service (headless)
