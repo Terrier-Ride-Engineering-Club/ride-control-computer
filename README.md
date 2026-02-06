@@ -89,10 +89,18 @@ python3 -m venv .venv
 On boot, shows a 5-second prompt. Press any key for desktop, otherwise launches Chrome kiosk with the RCC webserver.
 
 ```bash
-# Make startup script executable
-chmod +x /opt/rcc/scripts/rcc-boot.sh
+# Make scripts executable
+chmod +x /opt/rcc/scripts/*.sh
+```
 
-# Configure console auto-login
+**Option A: Desktop Auto-Login (GUI)**
+```bash
+mkdir -p ~/.config/autostart
+cp /opt/rcc/scripts/rcc-boot.desktop ~/.config/autostart/
+```
+
+**Option B: Console Auto-Login (headless)**
+```bash
 sudo raspi-config
 # Navigate: System Options → Boot / Auto Login → Console Autologin
 
