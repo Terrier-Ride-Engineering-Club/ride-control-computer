@@ -96,8 +96,8 @@ chmod +x /opt/rcc/scripts/rcc-startup.sh
 sudo raspi-config
 # Navigate: System Options → Boot / Auto Login → Console Autologin
 
-# Add startup script to bashrc
-echo '/opt/rcc/scripts/rcc-startup.sh' >> ~/.bashrc
+# Add startup script to bashrc (only if not already present)
+grep -qxF '/opt/rcc/scripts/rcc-startup.sh' ~/.bashrc || echo '/opt/rcc/scripts/rcc-startup.sh' >> ~/.bashrc
 ```
 
 Reboot to test.

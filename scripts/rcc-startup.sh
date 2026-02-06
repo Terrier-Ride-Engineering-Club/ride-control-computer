@@ -37,6 +37,9 @@ else
         --disable-infobars \
         --disable-session-crashed-bubble \
         --disable-restore-session-state \
+        --disable-features=TranslateUI \
+        --disable-sync \
+        --check-for-update-interval=31536000 \
         "$WEBSERVER_URL"
 
     # If Chrome exits, stop RCC
