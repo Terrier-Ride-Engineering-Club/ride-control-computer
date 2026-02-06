@@ -45,13 +45,24 @@ def main():
         from ride_control_computer.motor_controller.RoboClaw import RoboClaw
         from ride_control_computer.motor_controller.RoboClawSerialMC import RoboClawSerialMotorController
 
-        # attempt to open roboclaw on default or fallback port.
-        roboclaw: RoboClaw
-        try:
-            roboclaw = RoboClaw() # default port
-        except serial.serialutil.SerialException:
-            roboclaw = RoboClaw(port='/dev/ttyACM0') # fallback (via usb on pi)
-        logger.debug(f"Roboclaw init on default port: {roboclaw.port.name}")
+        # Try ports in order until one works
+        ROBOCLAW_PORTS = [
+            '/dev/ttyAMA1',   # Pi GPIO serial
+            '/dev/ttyACM0',   # USB (Pi)
+            '/dev/ttyACM1',   # USB (Pi fallback)
+        ]
+
+        roboclaw = None
+        for port in ROBOCLAW_PORTS:
+            try:
+                roboclaw = RoboClaw(port=port)
+                logger.info(f"RoboClaw connected on {port}")
+                break
+            except serial.serialutil.SerialException:
+                logger.debug(f"RoboClaw not found on {port}")
+
+        if roboclaw is None:
+            raise RuntimeError(f"RoboClaw not found on any port: {ROBOCLAW_PORTS}")
 
         mc = RoboClawSerialMotorController(roboclaw)
         # TODO: Add hardware ControlPanel when implemented

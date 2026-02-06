@@ -42,7 +42,6 @@ class RoboClaw:
             self.port.close()
             self.port.open()
         except serial.serialutil.SerialException:
-            logger.exception('roboclaw serial')
             if auto_recover:
                 self.recover_serial()
             else:
