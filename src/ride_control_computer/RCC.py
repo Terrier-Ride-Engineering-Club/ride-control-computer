@@ -69,13 +69,19 @@ class RCC:
 
         threading.Thread(
             target=self.__controlPanel.run,
-            daemon=True).start()
+            daemon=True,
+            name="ControlPanelListener"
+            ).start()
 
         threading.Thread(
             target=self.__webserverController.start,
-            daemon=True).start()
+            daemon=True,
+            name="WebserverMainThread"
+            ).start()
 
         self.__motorController.start()
+
+        time.sleep(0.05)
 
         while True:
             self.__controlPanel.triggerCallbacks()
@@ -219,25 +225,29 @@ class RCC:
         elapsed = time.monotonic() - self.__lastTelemPrintTime
         if elapsed >= self.TELEMETRY_PRINT_INTERVAL:
             self.__lastTelemPrintTime = time.monotonic()
+            mcStatus = "DEAD" if self.__motorController.isTelemetryStale() else "HEALTHY"
 
             # Print telemetry data
             logger.info("======================== Telemetry ========================")
             logger.info(f"[E-Stop Software Latched]: {self.__estopSoftwareLatched}")
             logger.debug(f"[MC Type]: {str(type(self.__motorController))}")
-            logger.info(f"[MC Connection Active]: {self.__motorController.isTelemetryStale()}")
+            logger.info(f"[MC Connection]: {mcStatus}")
             logger.info(f"[MC State]: {self.__motorController.getState()}")
             lt = self.__loopTimer
-            logger.debug(f"[RCC dt]: {lt.dt * 1000:.2f} ms | avg: {lt.avg * 1000:.2f} ms | p95: {lt.p95 * 1000:.2f} ms")
+            thread_names = [t.name for t in threading.enumerate()]
+            logger.debug(f"[RCC dt]: {lt.dt * 1000:.2f} ms | avg: {lt.avg * 1000:.2f} ms | p95: {lt.p95 * 1000:.2f} ms. ")
             lt.reset()
 
-            cp_lt = self.__controlPanel.loop_timer
+            cp_lt = self.__controlPanel.loopTimer
             logger.debug(f"    [ControlPanel dt]:   {cp_lt.dt * 1000:.2f} ms | avg: {cp_lt.avg * 1000:.2f} ms | p95: {cp_lt.p95 * 1000:.2f} ms")
             cp_lt.reset()
 
-            mc_lt = self.__motorController.loop_timer
+            mc_lt = self.__motorController.loopTimer
             if mc_lt is not None:
                 logger.debug(f"    [MC dt]:   {mc_lt.dt * 1000:.2f} ms | avg: {mc_lt.avg * 1000:.2f} ms | p95: {mc_lt.p95 * 1000:.2f} ms")
                 mc_lt.reset()
+
+            logger.debug(    f"Alive threads ({threading.active_count()}): {thread_names}")
 
             logger.info("===========================================================")
 
