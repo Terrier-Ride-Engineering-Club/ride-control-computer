@@ -213,14 +213,15 @@ class MotorController(ABC):
         """
         ...
 
+    @property
+    def loopTimer(self) -> Optional[LoopTimer]:
+        """Returns the telemetry loop timer, or None if not implemented by child."""
+        return None
+
     # =========================================================================
     #                           STATE
     # =========================================================================
 
-    @property
-    def loop_timer(self) -> Optional[LoopTimer]:
-        """Returns the telemetry loop timer, or None if not implemented by child."""
-        return None
 
     def getState(self) -> MotorControllerState:
         """Gets the current state of the motor controller."""

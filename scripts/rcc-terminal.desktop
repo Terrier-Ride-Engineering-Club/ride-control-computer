@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=RCC Terminal
+Comment=Start RCC in terminal (no browser)
+Exec=lxterminal -e /opt/rcc/scripts/rcc-terminal.sh
+Icon=utilities-terminal
+Terminal=false
+Categories=Utility;

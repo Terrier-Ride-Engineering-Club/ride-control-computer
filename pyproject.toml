@@ -11,9 +11,11 @@ requires-python = ">=3.11"
 license = { text = "MIT" }
 authors = [{ name = "Jack Justus" }]
 
-# Add runtime deps here as you discover them (examples below)
 dependencies = [
-  # "pyserial>=3.5",
+  "pyserial>=3.5",
+  "pythoncrc>=1.21",
+  "flask>=3.0",
+  "waitress>=3.0",
 ]
 
 [project.optional-dependencies]

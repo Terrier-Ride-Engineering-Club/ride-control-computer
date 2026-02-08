@@ -85,7 +85,7 @@ class ControlPanel(ABC):
     
     
     @property
-    def loop_timer(self) -> LoopTimer:
+    def loopTimer(self) -> LoopTimer:
         return self._loop_timer
 
     def _addListToCallbackQueue(self, callbackList: List[Callable[[], None]]) -> None:
