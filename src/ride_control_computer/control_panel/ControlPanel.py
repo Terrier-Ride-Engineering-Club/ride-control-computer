@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import List, Callable
 from enum import Enum
+from functools import partial
 from queue import Queue, Empty
 from threading import Thread
 
@@ -91,3 +92,22 @@ class ControlPanel(ABC):
     def _addListToCallbackQueue(self, callbackList: List[Callable[[], None]]) -> None:
         for callback in callbackList:
             self.__callbackQueue.put(callback)
+
+    # Protected enqueue helpers for subclasses
+    def _enqueueDispatch(self, state: MomentaryButtonState) -> None:
+        self._addListToCallbackQueue([partial(cb, state) for cb in self.__dispatchCallbacks])
+
+    def _enqueueReset(self, state: MomentaryButtonState) -> None:
+        self._addListToCallbackQueue([partial(cb, state) for cb in self.__resetCallbacks])
+
+    def _enqueueStop(self, state: MomentaryButtonState) -> None:
+        self._addListToCallbackQueue([partial(cb, state) for cb in self.__stopCallbacks])
+
+    def _enqueueEstop(self, state: MomentaryButtonState) -> None:
+        self._addListToCallbackQueue([partial(cb, state) for cb in self.__estopCallbacks])
+
+    def _enqueueMaintenanceSwitch(self, state: SustainedSwitchState) -> None:
+        self._addListToCallbackQueue([partial(cb, state) for cb in self.__maintenanceSwitchCallbacks])
+
+    def _enqueueMaintenanceJogSwitch(self, state: MomentarySwitchState) -> None:
+        self._addListToCallbackQueue([partial(cb, state) for cb in self.__maintenanceJogSwitchCallbacks])
