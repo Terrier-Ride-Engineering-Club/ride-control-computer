@@ -1,8 +1,8 @@
-from ride_control_computer.theming_controller.MockThemeingController import MockThemingController
+from pydoc import html
 from ride_control_computer.webserver.WebserverController import WebserverController
 from flask import *
 from waitress import serve
-from ride_control_computer.motor_controller.MockMotorController import MockMotorController
+from ride_control_computer.motor_controller.MotorData import getAverageSpeed # this should be done somewhere else
 
 class MockWebserverController(WebserverController):
 
@@ -107,9 +107,11 @@ class MockWebserverController(WebserverController):
             )
         @self.app.route('/two')
         def two():
+            speeds = self.getSpeed()
+            positions = self.getPositions()
             time_list = [1, 2, 3, 4, 5]
-            speed_list = [10, 20, 30, 40, 50]
-            position_list = [11, 21, 31, 41, 51]
+            speed_list = [speeds[0], speeds[1], getAverageSpeed(), 40, 50]
+            position_list = [positions[0], positions[1], 31, 41, 51]
             data_lists = [time_list, speed_list, position_list]
 
             # Convert into a list of dicts for Jinja
