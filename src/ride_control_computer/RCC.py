@@ -4,14 +4,23 @@
 import logging
 import threading
 import time
+from enum import Enum
 
 from ride_control_computer.loop_timer import LoopTimer
 from ride_control_computer.motor_controller.MotorController import MotorController
+from ride_control_computer.RideTimer import RideTimer, RideTimingData
 from ride_control_computer.theming_controller.ThemingController import ThemingController
 from ride_control_computer.webserver.WebserverController import WebserverController
 from ride_control_computer.control_panel.ControlPanel import ControlPanel, MomentaryButtonState, MomentarySwitchState, SustainedSwitchState
 
 logger = logging.getLogger(__name__)
+
+
+class RCCState(Enum):
+    IDLE =          0
+    RUNNING =       1
+    ESTOP =         2
+    MAINTENANCE =   3
 
 
 class RCC:
@@ -27,11 +36,12 @@ class RCC:
     __themingController: ThemingController
     __webserverController: WebserverController
 
-    __maintenanceMode: bool
-    __estopSoftwareLatched: bool
+    __state: RCCState
+    __maintenanceSwitchOn: bool
 
     __lastTelemPrintTime: float
     __loopTimer: LoopTimer
+    __rideTimer: RideTimer
     TELEMETRY_PRINT_INTERVAL = 2; # time in s
 
     def __init__(
@@ -46,11 +56,12 @@ class RCC:
         self.__themingController = themingController
         self.__webserverController = webserverController
 
-        self.__maintenanceMode = False
-        self.__estopSoftwareLatched = False
+        self.__state = RCCState.IDLE
+        self.__maintenanceSwitchOn = False
 
         self.__lastTelemPrintTime = 0
         self.__loopTimer = LoopTimer()
+        self.__rideTimer = RideTimer()
 
         # Map control panel callbacks
         controlPanel.addDispatchCallback(self.__onDispatch)
@@ -86,11 +97,11 @@ class RCC:
         while True:
             self.__controlPanel.triggerCallbacks()
 
-            if not self.__estopSoftwareLatched:
+            if self.__state != RCCState.ESTOP:
                 # Latch E-Stop if hardware reports it active
                 if self.__motorController.isEstopActive():
                     logger.warning("Hardware E-Stop detected — latching")
-                    self.__handleEstop()
+                    self.__setState(RCCState.ESTOP)
                 else:
                     self.__checkSafetyConstraints()
 
@@ -98,6 +109,40 @@ class RCC:
 
             self.__loopTimer.tick()
             time.sleep(0.001)
+
+    # =========================================================================
+    #                           STATE MANAGEMENT
+    # =========================================================================
+
+    def __setState(self, newState: RCCState):
+        """
+        Centralized state transition. All state changes go through here.
+        Handles exit/entry actions and ride timer events.
+        """
+        if newState == self.__state:
+            return
+
+        oldState = self.__state
+        self.__state = newState
+        logger.info(f"RCC State: {oldState.name} -> {newState.name}")
+
+        # Exit actions
+        if oldState == RCCState.RUNNING:
+            self.__rideTimer.endRide()
+        if oldState == RCCState.ESTOP:
+            self.__rideTimer.endEstop()
+
+        # Enter actions
+        if newState == RCCState.RUNNING:
+            self.__rideTimer.startRide()
+        if newState == RCCState.ESTOP:
+            self.__rideTimer.startEstop()
+            self.__motorController.haltMotion()
+            self.__themingController.stopShow()
+
+    def getState(self) -> RCCState:
+        """Returns the current RCC state."""
+        return self.__state
 
     # =========================================================================
     #                           SAFETY
@@ -111,7 +156,7 @@ class RCC:
         violation = self.__evaluateConstraints()
         if violation is not None:
             logger.warning(f"Safety constraint violated: {violation} — latching E-Stop")
-            self.__handleEstop()
+            self.__setState(RCCState.ESTOP)
 
     def __evaluateConstraints(self) -> str | None:
         """
@@ -136,15 +181,13 @@ class RCC:
     #                                E-STOP
     # =========================================================================
 
-    def __handleEstop(self):
-        """Latch the software E-Stop and halt all systems."""
-        self.__estopSoftwareLatched = True
-        self.__motorController.haltMotion()
-        self.__themingController.stopShow()
-
     def isEstopResetInhibited(self) -> bool:
         """Returns True if software is inhibiting E-Stop reset."""
-        return self.__estopSoftwareLatched
+        return self.__state == RCCState.ESTOP
+
+    def getRideTimingData(self) -> RideTimingData:
+        """Returns the ride timing data object. Used by webserver."""
+        return self.__rideTimer.data
 
     # =========================================================================
     #                           CONTROL PANEL CALLBACKS
@@ -154,26 +197,30 @@ class RCC:
         if state == MomentaryButtonState.PRESSED:
             logger.info("Dispatch pressed")
 
-            if self.__estopSoftwareLatched:
-                logger.warning("Dispatch ignored: E-Stop active")
+            if self.__state != RCCState.IDLE:
+                logger.info(f"Dispatch ignored: state is {self.__state.name}")
                 return
 
-            if not self.__maintenanceMode:
-                self.__themingController.startShow()
-                self.__motorController.startRideSequence()
-            else:
-                logger.info("Dispatch ignored: maintenance mode active")
+            self.__themingController.startShow()
+            self.__motorController.startRideSequence()
+            self.__setState(RCCState.RUNNING)
 
     def __onReset(self, state: MomentaryButtonState) -> None:
         if state == MomentaryButtonState.PRESSED:
             logger.info("Reset pressed")
 
-            if self.__estopSoftwareLatched:
-                if self.__motorController.isEstopActive():
-                    logger.warning("Cannot reset: hardware E-Stop still active")
-                    return
-                logger.info("Hardware E-Stop cleared — releasing latch")
-                self.__estopSoftwareLatched = False
+            if self.__state != RCCState.ESTOP:
+                return
+
+            if self.__motorController.isEstopActive():
+                logger.warning("Cannot reset: hardware E-Stop still active")
+                return
+
+            logger.info("E-Stop cleared — releasing latch")
+            if self.__maintenanceSwitchOn:
+                self.__setState(RCCState.MAINTENANCE)
+            else:
+                self.__setState(RCCState.IDLE)
 
     def __onStop(self, state: MomentaryButtonState) -> None:
         if state == MomentaryButtonState.PRESSED:
@@ -182,23 +229,35 @@ class RCC:
             self.__motorController.stopMotion()
             self.__themingController.stopShow()
 
+            if self.__state == RCCState.RUNNING:
+                self.__setState(RCCState.IDLE)
+
     def __onEstop(self, state: MomentaryButtonState) -> None:
         if state == MomentaryButtonState.PRESSED:
             logger.warning("E-Stop button pressed — latching")
-            self.__handleEstop()
+            self.__setState(RCCState.ESTOP)
 
     def __onMaintenanceSwitch(self, state: SustainedSwitchState) -> None:
         if state == SustainedSwitchState.ON:
-            logger.info("Maintenance mode enabled")
-            self.__maintenanceMode = True
-            self.__themingController.stopShow()
+            logger.info("Maintenance switch ON")
+            self.__maintenanceSwitchOn = True
+
+            if self.__state == RCCState.IDLE:
+                self.__setState(RCCState.MAINTENANCE)
+            elif self.__state == RCCState.RUNNING:
+                logger.warning("Maintenance switch during RUNNING — fault")
+                self.__motorController.stopMotion()
+                self.__setState(RCCState.ESTOP)
 
         elif state == SustainedSwitchState.OFF:
-            logger.info("Maintenance mode disabled")
-            self.__maintenanceMode = False
+            logger.info("Maintenance switch OFF")
+            self.__maintenanceSwitchOn = False
+
+            if self.__state == RCCState.MAINTENANCE:
+                self.__setState(RCCState.IDLE)
 
     def __onMaintenanceJogSwitch(self, state: MomentarySwitchState) -> None:
-        if not self.__maintenanceMode or self.__estopSoftwareLatched:
+        if self.__state != RCCState.MAINTENANCE:
             return
 
         if state == MomentarySwitchState.UP:
@@ -229,10 +288,16 @@ class RCC:
 
             # Print telemetry data
             logger.info("======================== Telemetry ========================")
-            logger.info(f"[E-Stop Software Latched]: {self.__estopSoftwareLatched}")
+            logger.info(f"[RCC State]: {self.__state.name}")
             logger.debug(f"[MC Type]: {str(type(self.__motorController))}")
             logger.info(f"[MC Connection]: {mcStatus}")
             logger.info(f"[MC State]: {self.__motorController.getState()}")
+            rt = self.__rideTimer.data
+            rideStatus = f"RUNNING ({rt.getCurrentRideElapsed():.1f}s)" if rt.rideActive else "—"
+            logger.info(f"[Uptime]: {rt.getUptime():.1f}s")
+            logger.info(f"[Ride]: {rideStatus}")
+            logger.info(f"[Rides]: {rt.totalRideCycles} total | last: {rt.lastRideDuration:.2f}s | avg: {rt.getAverageRideDuration():.2f}s")
+            logger.info(f"[E-Stop]: count={rt.totalEstopCount} | total time={rt.totalEstopTime:.1f}s")
             lt = self.__loopTimer
             thread_names = [t.name for t in threading.enumerate()]
             logger.debug(f"[RCC dt]: {lt.dt * 1000:.2f} ms | avg: {lt.avg * 1000:.2f} ms | p95: {lt.p95 * 1000:.2f} ms. ")
@@ -250,4 +315,3 @@ class RCC:
             logger.debug(    f"Alive threads ({threading.active_count()}): {thread_names}")
 
             logger.info("===========================================================")
-
