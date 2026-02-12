@@ -22,7 +22,9 @@ class MockWebserverController(WebserverController):
         def one():
             speed = self.getSpeed()
             state = self.getState()
-            positions = self.getPositions()  # e.g. (5, 8)
+            positions = self.getPositions()
+            ride_time = self.getElapsedTime()
+            print(ride_time)
 
             # convert 0–10 → percentage height
             line1 = positions[0] * 10
@@ -34,7 +36,8 @@ class MockWebserverController(WebserverController):
                 state=state,
                 positions=positions,
                 line1=line1,
-                line2=line2
+                line2=line2,
+                rideTime = ride_time
             )
         @self.app.route('/two')
         def two():

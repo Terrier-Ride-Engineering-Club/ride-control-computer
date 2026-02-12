@@ -49,12 +49,12 @@ class RCC:
             motorController: MotorController,
             controlPanel: ControlPanel,
             themingController: ThemingController,
-            webserverController: WebserverController
+            #webserverController: WebserverController
             ):
         self.__motorController = motorController
         self.__controlPanel = controlPanel
         self.__themingController = themingController
-        self.__webserverController = webserverController
+        self.__webserverController = None
 
         self.__state = RCCState.IDLE
         self.__maintenanceSwitchOn = False
@@ -71,6 +71,9 @@ class RCC:
         controlPanel.addMaintenanceSwitchCallback(self.__onMaintenanceSwitch)
         controlPanel.addMaintenanceJogSwitchCallback(self.__onMaintenanceJogSwitch)
 
+    def set_webserver(self,webserverController: WebserverController):
+        """sets the webserver controller that will be used"""
+        self.__webserverController = webserverController
     # =========================================================================
     #                           LIFECYCLE
     # =========================================================================
@@ -189,6 +192,10 @@ class RCC:
         """Returns the ride timing data object. Used by webserver."""
         return self.__rideTimer.data
 
+    def getCurrentRideElapsed(self) -> float:
+        """Returns the current ride elapsed time. Used by webserver."""
+        return self.__rideTimer.data.getCurrentRideElapsed()
+
     # =========================================================================
     #                           CONTROL PANEL CALLBACKS
     # =========================================================================
@@ -285,7 +292,7 @@ class RCC:
         if elapsed >= self.TELEMETRY_PRINT_INTERVAL:
             self.__lastTelemPrintTime = time.monotonic()
             mcStatus = "DEAD" if self.__motorController.isTelemetryStale() else "HEALTHY"
-
+'''
             # Print telemetry data
             logger.info("======================== Telemetry ========================")
             logger.info(f"[RCC State]: {self.__state.name}")
@@ -315,3 +322,4 @@ class RCC:
             logger.debug(    f"Alive threads ({threading.active_count()}): {thread_names}")
 
             logger.info("===========================================================")
+            '''

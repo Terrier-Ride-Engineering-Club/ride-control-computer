@@ -16,6 +16,8 @@ from ride_control_computer.motor_controller.RoboClawSerialMC import RoboClawSeri
 from ride_control_computer.motor_controller.RoboClaw import RoboClaw
 from ride_control_computer.theming_controller.MockThemeingController import MockThemingController
 from ride_control_computer.webserver.MockWebserverController import MockWebserverController
+from ride_control_computer.RideTimer import RideTimingData
+
 # SETUP LOGGING
 LOG_FORMAT = "%(asctime)s %(levelname)s [%(name)s]: %(message)s"
 ts = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -86,9 +88,13 @@ def main():
         startTheming=tc.startShow,
         stopTheming=tc.stopShow,
         themeStatus=tc.getStatus,
-        getPositions=mc.getMotorPositions)
+        getPositions=mc.getMotorPositions,
+        #getRideTime=RCC.getRideTimingData
+        )
 
-    rideControlComputer = RCC(mc, cp, tc, wc)
+    rideControlComputer = RCC(mc, cp, tc)
+    wc.set_rcc(rideControlComputer)
+    rideControlComputer.set_webserver(wc)
     rideControlComputer.run()
 
 if __name__ == '__main__':
