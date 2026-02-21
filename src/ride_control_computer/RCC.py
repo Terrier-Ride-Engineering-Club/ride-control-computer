@@ -5,6 +5,7 @@ import logging
 import threading
 import time
 from enum import Enum
+from idlelib.debugobj_r import remote_object_tree_item
 
 from ride_control_computer.loop_timer import LoopTimer
 from ride_control_computer.motor_controller.MotorController import MotorController
@@ -12,6 +13,7 @@ from ride_control_computer.RideTimer import RideTimer, RideTimingData
 from ride_control_computer.theming_controller.ThemingController import ThemingController
 from ride_control_computer.webserver.WebserverController import WebserverController
 from ride_control_computer.control_panel.ControlPanel import ControlPanel, MomentaryButtonState, MomentarySwitchState, SustainedSwitchState
+from ride_control_computer.RideTelemetry import RideTelemetryLogger
 
 logger = logging.getLogger(__name__)
 
@@ -63,6 +65,8 @@ class RCC:
         self.__loopTimer = LoopTimer()
         self.__rideTimer = RideTimer()
 
+        self.__telemetryLogger = RideTelemetryLogger()
+
         # Map control panel callbacks
         controlPanel.addDispatchCallback(self.__onDispatch)
         controlPanel.addResetCallback(self.__onReset)
@@ -108,6 +112,13 @@ class RCC:
                 else:
                     self.__checkSafetyConstraints()
 
+            if self.__state == RCCState.RUNNING:
+                positions = self.__motorController.getMotorPositions()
+                velocities = self.__motorController.getMotorSpeeds()
+                elapsed = self.__rideTimer.data.getCurrentRideElapsed()
+
+                self.__telemetryLogger.logSample(elapsed, positions, velocities)
+
             self.__printTelemetry()
 
             self.__loopTimer.tick()
@@ -132,12 +143,13 @@ class RCC:
         # Exit actions
         if oldState == RCCState.RUNNING:
             self.__rideTimer.endRide()
+            self.__telemetryLogger.endRide()
         if oldState == RCCState.ESTOP:
             self.__rideTimer.endEstop()
 
         # Enter actions
         if newState == RCCState.RUNNING:
-            self.__rideTimer.startRide()
+            self.__telemetryLogger.startRide()
         if newState == RCCState.ESTOP:
             self.__rideTimer.startEstop()
             self.__motorController.haltMotion()
@@ -195,6 +207,13 @@ class RCC:
     def getCurrentRideElapsed(self) -> float:
         """Returns the current ride elapsed time. Used by webserver."""
         return self.__rideTimer.data.getCurrentRideElapsed()
+
+    def getAverageRideDuration(self) -> float:
+        """Returns the average ride elapsed time. Used by webserver."""
+        return self.__rideTimer.data.getAverageRideDuration()
+
+    def getTelemetryLogger(self):
+        return self.__telemetryLogger
 
     # =========================================================================
     #                           CONTROL PANEL CALLBACKS

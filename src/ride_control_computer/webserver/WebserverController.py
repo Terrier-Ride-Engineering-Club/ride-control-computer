@@ -15,6 +15,7 @@ class WebserverController(ABC):
                  stopTheming: Callable[[], None],
                  themeStatus: Callable[[], str],
                  getPositions: Callable[[], tuple[int, int]],
+                 getAverageSpeed: Callable[[], float],
                  ):
         self.app = Flask(__name__)
         self.getSpeed = getSpeeds
@@ -23,6 +24,7 @@ class WebserverController(ABC):
         self.stopTheming = stopTheming
         self.themeStatus = themeStatus
         self.getPositions = getPositions
+        self.getAverageSpeed = getAverageSpeed
         self.rcc = None
 
     def set_rcc(self,rcc):
@@ -31,8 +33,15 @@ class WebserverController(ABC):
     def getElapsedTime(self):
         return self.rcc.getCurrentRideElapsed()
 
+    def getAverageTime(self):
+        return self.rcc.getAverageRideDuration()
+
     def getRideData(self):
         return self.rcc.getCurrentRideData()
+
+    def getRideElapsed(self):
+        return self.rcc.getCurrentRideElapsed()
+
 
     def start(self):
         @self.app.route('/')
@@ -62,6 +71,10 @@ class WebserverController(ABC):
         @self.app.route("/stop-theming", methods=["POST"])
         def stop_theming():
             """code to stop theming - redirect to page three"""
+            ...
+
+        @self.app.route('/four')
+        def four():
             ...
 
         self.app.run(debug=False)

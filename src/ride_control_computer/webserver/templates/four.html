@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Ride Comparison</title>
+    <meta http-equiv="refresh" content="1">
+    <style>
+        body {
+            text-align: center;
+            font-family: Arial;
+        }
+        table {
+            margin: auto;
+            font-size: 18px;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid black;
+            padding: 10px 20px;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .section-divider td {
+            border: none;
+            padding: 15px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Ride Telemetry Comparison</h1>
+    <h2>Elapsed Time: {{ "%.2f"|format(elapsed) }} s</h2>
+    <h3>Compared Against {{ count }} Previous Rides</h3>
+
+    <table>
+        <tr>
+            <th></th>
+            <th>Motor 1</th>
+            <th>Motor 2</th>
+        </tr>
+
+        <tr>
+            <td><b>Current Position</b></td>
+            <td>{{ m1_pos }}</td>
+            <td>{{ m2_pos }}</td>
+        </tr>
+
+        <tr>
+            <td><b>Average Position</b></td>
+            <td>{{ "%.1f"|format(avg_m1_pos) }}</td>
+            <td>{{ "%.1f"|format(avg_m2_pos) }}</td>
+        </tr>
+
+        <tr>
+            <td><b>Position Difference</b></td>
+            <td>{{ "%.1f"|format(diff_m1_pos) }}</td>
+            <td>{{ "%.1f"|format(diff_m2_pos) }}</td>
+        </tr>
+
+        <tr class="section-divider">
+            <td colspan="3"><hr></td>
+        </tr>
+
+        <tr>
+            <td><b>Current Velocity</b></td>
+            <td>{{ "%.1f"|format(m1_vel) }}</td>
+            <td>{{ "%.1f"|format(m2_vel) }}</td>
+        </tr>
+
+        <tr>
+            <td><b>Average Velocity</b></td>
+            <td>{{ "%.1f"|format(avg_m1_vel) }}</td>
+            <td>{{ "%.1f"|format(avg_m2_vel) }}</td>
+        </tr>
+
+        <tr>
+            <td><b>Velocity Difference</b></td>
+            <td>{{ "%.1f"|format(diff_m1_vel) }}</td>
+            <td>{{ "%.1f"|format(diff_m2_vel) }}</td>
+        </tr>
+
+    </table>
+
+</body>
+</html>
