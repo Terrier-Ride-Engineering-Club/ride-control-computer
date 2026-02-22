@@ -1,6 +1,7 @@
 from pydoc import html
 from ride_control_computer.webserver.WebserverController import WebserverController
 from flask import *
+from math import inf
 from waitress import serve
 from ride_control_computer.motor_controller.MotorData import getAverageSpeed # this should be done somewhere else
 
@@ -76,7 +77,6 @@ class MockWebserverController(WebserverController):
 
         @self.app.route('/four')
         def four():
-            from math import inf
 
             if self.rcc is None:
                 return "RCC not connected"
