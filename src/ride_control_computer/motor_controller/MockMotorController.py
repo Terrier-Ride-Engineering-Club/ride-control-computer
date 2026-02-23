@@ -22,10 +22,7 @@ class MockMotorController(MotorController):
     # =========================================================================
 
     def startRideSequence(self):
-        self._state = MotorControllerState.SEQUENCING
-
-    def home(self):
-        self._state = MotorControllerState.HOMING
+        pass
 
     def jogMotor(self, motorNumber: int, direction: int):
         self._state = MotorControllerState.JOGGING
@@ -65,7 +62,7 @@ class MockMotorController(MotorController):
         pass
 
     def getControllerStatus(self) -> str:
-        pass
+        return "Normal"
 
     # =========================================================================
     #                           STATE
@@ -86,9 +83,3 @@ class MockMotorController(MotorController):
 
     def isTelemetryStale(self, maxAgeSeconds: float | None = None) -> bool:
         return False
-
-
-
-
-        
-        

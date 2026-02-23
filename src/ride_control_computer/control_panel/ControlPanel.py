@@ -33,7 +33,7 @@ class ControlPanel(ABC):
     - Reset button
     - Stop button
     - E-Stop button
-    - Maintenance mode switch: ON/OFF/MAINTENANCE sustained rotary switch
+    - Power switch: ON/OFF/MAINTENANCE sustained rotary switch
     - Maintenance Jog switch: UP/N/DOWN momentary rotary switch
     """
 
@@ -45,7 +45,7 @@ class ControlPanel(ABC):
         self.__resetCallbacks: List[Callable[[], None]] = []
         self.__stopCallbacks: List[Callable[[], None]] = []
         self.__estopCallbacks: List[Callable[[], None]] = []
-        self.__maintenanceSwitchCallbacks: List[Callable[[], None]] = []
+        self.__powerSwitchCallbacks: List[Callable[[], None]] = []
         self.__maintenanceJogSwitchCallbacks: List[Callable[[], None]] = []
 
     @abstractmethod
@@ -78,8 +78,8 @@ class ControlPanel(ABC):
         self.__stopCallbacks.append(callback)
     def addEstopCallback(self, callback: Callable[[MomentaryButtonState], None]) -> None:
         self.__estopCallbacks.append(callback)
-    def addMaintenanceSwitchCallback(self, callback: Callable[[SustainedSwitchState], None]) -> None:
-        self.__maintenanceSwitchCallbacks.append(callback)
+    def addPowerSwitchCallback(self, callback: Callable[[SustainedSwitchState], None]) -> None:
+        self.__powerSwitchCallbacks.append(callback)
     def addMaintenanceJogSwitchCallback(self, callback: Callable[[MomentarySwitchState], None]) -> None:
         self.__maintenanceJogSwitchCallbacks.append(callback)
     

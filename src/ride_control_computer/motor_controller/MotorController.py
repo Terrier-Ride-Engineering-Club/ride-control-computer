@@ -26,15 +26,13 @@ class ControllerTelemetry:
     status: str = "Unknown"
     temp1: float = 0.0
     temp2: float = 0.0
-    last_update: float = 0.0
+    lastUpdate: float = 0.0
 
 class MotorControllerState(Enum):
-    IDLE =          0
-    JOGGING =       1
-    HOMING =        2
-    SEQUENCING =    3
-    STOPPING =      4
-    DISABLED =      5
+    IDLE =      0
+    JOGGING =   1
+    STOPPING =  2
+    DISABLED =  3
 
 class MotorController(ABC):
     """
@@ -74,11 +72,6 @@ class MotorController(ABC):
     @abstractmethod
     def startRideSequence(self):
         """Starts the ride sequence."""
-        ...
-
-    @abstractmethod
-    def home(self):
-        """Stops the ride sequence and brings the motors to the home position."""
         ...
 
     @abstractmethod

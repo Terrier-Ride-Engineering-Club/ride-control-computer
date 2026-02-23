@@ -90,10 +90,11 @@ class TestRoboClawSerialMotorController():
             roboClaw = _configureDefaultMock(mockCls)
             controller = RoboClawSerialMotorController(roboClaw)
             controller.start()
+            time.sleep(0.05)
+            # startRideSequence is a no-op at the MC level; ride lifecycle is RCC's concern
             controller.startRideSequence()
-            assert controller.getState() is MotorControllerState.SEQUENCING
+            assert controller.getState() is MotorControllerState.IDLE
 
-            # Test triggering E-Stop mid sequence
             controller.stopMotion()
             assert controller.getState() is MotorControllerState.STOPPING
 
