@@ -16,6 +16,7 @@ dependencies = [
   "pythoncrc>=1.21",
   "flask>=3.0",
   "waitress>=3.0",
+  "gpiozero>=2.0",
 ]
 
 [project.optional-dependencies]

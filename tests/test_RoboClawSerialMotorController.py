@@ -91,8 +91,7 @@ class TestRoboClawSerialMotorController():
             controller = RoboClawSerialMotorController(roboClaw)
             controller.start()
             time.sleep(0.05)
-            # startRideSequence is a no-op at the MC level; ride lifecycle is RCC's concern
-            controller.startRideSequence()
+            # Ride lifecycle is managed by RideSequencer at the RCC level; MC stays IDLE
             assert controller.getState() is MotorControllerState.IDLE
 
             controller.stopMotion()

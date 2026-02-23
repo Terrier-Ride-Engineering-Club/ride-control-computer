@@ -5,9 +5,24 @@ import time
 import logging
 from threading import Thread, Event, Lock
 
+from gpiozero import Button
+
 from ride_control_computer.loop_timer import LoopTimer
 from ride_control_computer.motor_controller.MotorController import MotorController, MotorControllerState, MotorTelemetry, ControllerTelemetry
 from ride_control_computer.motor_controller.RoboClaw import RoboClaw
+
+# --- Limit switch GPIO pins (BCM numbering) ---
+PIN_M1_TOP_LIMIT    = 12
+PIN_M1_BOTTOM_LIMIT = 16
+PIN_M2_TOP_LIMIT    = 20
+PIN_M2_BOTTOM_LIMIT = 21
+
+# --- Homing parameters ---
+HOMING_SPEED        = 300   # QPPS — slow creep toward limit switch
+HOMING_ACCELERATION = 100
+
+# --- Position tolerance ---
+POSITION_TOLERANCE  = 50    # Encoder counts — "near enough" to target
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +62,21 @@ class RoboClawSerialMotorController(MotorController):
         # Telemetry cache
         self._telemetry = ControllerTelemetry()
         self._telemetryLock = Lock()
+
+        # Limit switches (active-high, no internal pull-up)
+        self._limitSwitches = {
+            1: {"top": Button(PIN_M1_TOP_LIMIT, pull_up=False), "bottom": Button(PIN_M1_BOTTOM_LIMIT, pull_up=False)},
+            2: {"top": Button(PIN_M2_TOP_LIMIT, pull_up=False), "bottom": Button(PIN_M2_BOTTOM_LIMIT, pull_up=False)},
+        }
+        # Cached limit switch state (updated in _pollTelemetry, read from serial thread only)
+        self._limitCache: dict[int, dict[str, bool]] = {
+            1: {"top": False, "bottom": False},
+            2: {"top": False, "bottom": False},
+        }
+        # Last commanded position per motor (for isMotorNearTarget)
+        self._targetPositions: dict[int, int | None] = {1: None, 2: None}
+        # Motors currently being homed
+        self._homingMotors: list[int] = []
 
         # Background thread control
         self._stopEvent = Event()
@@ -95,10 +125,29 @@ class RoboClawSerialMotorController(MotorController):
     #                           COMMANDS
     # =========================================================================
 
-    def startRideSequence(self):
-        # Ride sequence lifecycle is managed at the RCC level.
-        # The MC stays IDLE and awaits motor commands from the RCC.
-        pass
+    def driveToPosition(self, motor: int, position: int, speed: int, accel: int, decel: int) -> None:
+        self._targetPositions[motor] = position
+        self._roboClaw.drive_to_position_with_speed_acceleration_deceleration(
+            motor, position, speed, accel, decel
+        )
+
+    def homeMotors(self, motors: list[int]) -> None:
+        self._homingMotors = [m for m in motors if not self._limitCache[m]["bottom"]]
+        if self._homingMotors:
+            self._setState(MotorControllerState.HOMING)
+        # Motors already at home are skipped; if all are already home, state stays IDLE
+
+    def isAtBottomLimit(self, motor: int) -> bool:
+        return self._limitCache[motor]["bottom"]
+
+    def isAtTopLimit(self, motor: int) -> bool:
+        return self._limitCache[motor]["top"]
+
+    def isMotorNearTarget(self, motor: int, tolerance: int = POSITION_TOLERANCE) -> bool:
+        target = self._targetPositions[motor]
+        if target is None:
+            return False
+        return abs(self.getMotorPosition(motor) - target) <= tolerance
 
     def jogMotor(self, motorNumber: int, direction: int):
         if motorNumber not in (1, 2):
@@ -260,6 +309,12 @@ class RoboClawSerialMotorController(MotorController):
         elif self._state == MotorControllerState.STOPPING:
             for motor in [1, 2]:
                 self._roboClaw.set_speed_with_acceleration(motor, 0, self._activeDeceleration)
+        elif self._state == MotorControllerState.HOMING:
+            for motor in self._homingMotors:
+                if not self._limitCache[motor]["bottom"]:
+                    self._roboClaw.set_speed_with_acceleration(motor, -HOMING_SPEED, HOMING_ACCELERATION)
+                else:
+                    self._roboClaw.set_speed_with_acceleration(motor, 0, HOMING_ACCELERATION)
 
     def _checkStateTransitions(self):
         """Check if the current state should transition."""
@@ -268,6 +323,9 @@ class RoboClawSerialMotorController(MotorController):
         elif self._state == MotorControllerState.STOPPING:
             s1, s2 = self.getMotorSpeeds()
             if abs(s1) < self.STOPPED_THRESHOLD and abs(s2) < self.STOPPED_THRESHOLD:
+                self._setState(MotorControllerState.IDLE)
+        elif self._state == MotorControllerState.HOMING:
+            if all(self._limitCache[m]["bottom"] for m in self._homingMotors):
                 self._setState(MotorControllerState.IDLE)
 
     def _pollTelemetry(self):
@@ -293,6 +351,11 @@ class RoboClawSerialMotorController(MotorController):
                 direction=speedData["direction"],
                 timestamp=pollingStartTime
             )
+
+        # Read limit switches
+        for motor in [1, 2]:
+            self._limitCache[motor]["top"]    = self._limitSwitches[motor]["top"].is_pressed
+            self._limitCache[motor]["bottom"] = self._limitSwitches[motor]["bottom"].is_pressed
 
         # Update cache atomically
         with self._telemetryLock:

@@ -9,6 +9,8 @@ from enum import Enum
 from ride_control_computer.loop_timer import LoopTimer
 from ride_control_computer.motor_controller.MotorController import MotorController, MotorControllerState
 from ride_control_computer.RideTimer import RideTimer, RideTimingData
+from ride_control_computer.ride_profile import RideProfile
+from ride_control_computer.ride_sequencer import RideSequencer
 from ride_control_computer.theming_controller.ThemingController import ThemingController
 from ride_control_computer.webserver.WebserverController import WebserverController
 from ride_control_computer.control_panel.ControlPanel import ControlPanel, MomentaryButtonState, MomentarySwitchState, SustainedSwitchState
@@ -39,6 +41,7 @@ class RCC:
     __controlPanel: ControlPanel
     __themingController: ThemingController
     __webserverController: WebserverController
+    __sequencer: RideSequencer
 
     __state: RCCState
     __preEstopState: RCCState
@@ -52,6 +55,7 @@ class RCC:
     TELEMETRY_PRINT_INTERVAL = 2    # seconds
     STOPPING_TIMEOUT_S       = 7.0  # max time in STOPPING before E-Stop
     RESETTING_DURATION_S     = 1.0  # fault-check window after reset pressed
+    PROFILE_PATH             = "profiles/default.json"
 
     def __init__(
             self,
@@ -64,6 +68,13 @@ class RCC:
         self.__controlPanel = controlPanel
         self.__themingController = themingController
         self.__webserverController = webserverController
+
+        profile = RideProfile.fromJson(self.PROFILE_PATH)
+        self.__sequencer = RideSequencer(
+            motorController,
+            profile,
+            onTimeout=lambda: self.__setState(RCCState.ESTOP),
+        )
 
         self.__state = RCCState.IDLE
         self.__preEstopState = RCCState.IDLE
@@ -146,7 +157,8 @@ class RCC:
             self.__themingController.stopShow()
         elif newState == RCCState.STOPPING:
             self.__stateEntryTime = time.monotonic()
-            self.__motorController.stopMotion()
+            self.__sequencer.abort()
+            self.__motorController.homeMotors([1, 2])
             self.__themingController.stopShow()
         elif newState == RCCState.RESETTING:
             self.__stateEntryTime = time.monotonic()
@@ -169,8 +181,10 @@ class RCC:
         self.__controlPanel.triggerCallbacks()
 
     def __updateState(self):
-        """Advance any timed state transitions (STOPPING timeout, RESETTING window)."""
-        if self.__state == RCCState.STOPPING:
+        """Advance any timed state transitions (RUNNING sequence, STOPPING timeout, RESETTING window)."""
+        if self.__state == RCCState.RUNNING:
+            self.__checkRunningProgress()
+        elif self.__state == RCCState.STOPPING:
             self.__checkStoppingProgress()
         elif self.__state == RCCState.RESETTING:
             self.__checkResettingComplete()
@@ -188,6 +202,16 @@ class RCC:
     # =========================================================================
     #                           TIMED STATE TRANSITIONS
     # =========================================================================
+
+    def __checkRunningProgress(self):
+        """
+        Called every loop tick while in RUNNING.
+        Advances the ride sequencer; restarts it automatically when the profile completes.
+        """
+        self.__sequencer.tick()
+        if self.__sequencer.isComplete():
+            logger.info("Ride profile complete — restarting profile")
+            self.__sequencer.start()
 
     def __checkStoppingProgress(self):
         """
@@ -275,7 +299,7 @@ class RCC:
                 return
 
             self.__themingController.startShow()
-            self.__motorController.startRideSequence()
+            self.__sequencer.start()
             self.__setState(RCCState.RUNNING)
 
     def __onReset(self, state: MomentaryButtonState) -> None:

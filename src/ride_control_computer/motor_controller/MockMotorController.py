@@ -21,8 +21,21 @@ class MockMotorController(MotorController):
     #                           COMMANDS
     # =========================================================================
 
-    def startRideSequence(self):
-        pass
+    def driveToPosition(self, motor: int, position: int, speed: int, accel: int, decel: int) -> None:
+        pass  # No-op: mock reports isMotorNearTarget=True immediately
+
+    def homeMotors(self, motors: list[int]) -> None:
+        # All mock motors are always at home; transition directly to IDLE
+        self._state = MotorControllerState.IDLE
+
+    def isAtBottomLimit(self, motor: int) -> bool:
+        return True
+
+    def isAtTopLimit(self, motor: int) -> bool:
+        return False
+
+    def isMotorNearTarget(self, motor: int, tolerance: int = 50) -> bool:
+        return True
 
     def jogMotor(self, motorNumber: int, direction: int):
         self._state = MotorControllerState.JOGGING

@@ -29,10 +29,11 @@ class ControllerTelemetry:
     lastUpdate: float = 0.0
 
 class MotorControllerState(Enum):
-    IDLE =      0
-    JOGGING =   1
-    STOPPING =  2
-    DISABLED =  3
+    DISABLED = 0
+    IDLE     = 1
+    JOGGING  = 2
+    HOMING   = 3   # Driving toward bottom limit switch
+    STOPPING = 4
 
 class MotorController(ABC):
     """
@@ -40,8 +41,7 @@ class MotorController(ABC):
 
     This motor controller is responsible for the following:
         1. Talking to an implementation-specific motor controller.
-        2. Taking motor start/stop commands.
-            a. When given the start command, the motor controller should follow a pre-defined ride sequence.
+        2. Executing motor commands (position, jog, stop, home).
         3. Providing feedback on the state of the motor controller, including motor speed, temp, etc.
             a. This information is available via get() functions in this interface.
     """
@@ -70,8 +70,50 @@ class MotorController(ABC):
     # =========================================================================
 
     @abstractmethod
-    def startRideSequence(self):
-        """Starts the ride sequence."""
+    def driveToPosition(self, motor: int, position: int, speed: int, accel: int, decel: int) -> None:
+        """
+        Drive motor to an absolute encoder position (fire-and-forget; hardware manages motion).
+
+        Args:
+            motor: Motor number (1 or 2)
+            position: Target encoder count
+            speed: Max speed in QPPS
+            accel: Acceleration in QPPS/s
+            decel: Deceleration in QPPS/s
+        """
+        ...
+
+    @abstractmethod
+    def homeMotors(self, motors: list[int]) -> None:
+        """
+        Drive specified motors toward the bottom limit switch at homing speed.
+        Stops each motor when its bottom limit switch is triggered.
+        Sets MC state to HOMING; transitions to IDLE when all motors reach home.
+
+        Args:
+            motors: List of motor numbers to home (e.g. [1, 2])
+        """
+        ...
+
+    @abstractmethod
+    def isAtBottomLimit(self, motor: int) -> bool:
+        """True if the bottom limit switch for this motor is currently active."""
+        ...
+
+    @abstractmethod
+    def isAtTopLimit(self, motor: int) -> bool:
+        """True if the top limit switch for this motor is currently active."""
+        ...
+
+    @abstractmethod
+    def isMotorNearTarget(self, motor: int, tolerance: int = 50) -> bool:
+        """
+        True if the motor encoder is within tolerance counts of the last commanded position.
+
+        Args:
+            motor: Motor number (1 or 2)
+            tolerance: Acceptable error in encoder counts
+        """
         ...
 
     @abstractmethod
