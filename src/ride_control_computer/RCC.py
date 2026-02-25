@@ -6,6 +6,7 @@ import threading
 import time
 from enum import Enum
 
+from ride_control_computer.fault_monitor import Fault, FaultMonitor, FaultSeverity
 from ride_control_computer.loop_timer import LoopTimer
 from ride_control_computer.motor_controller.MotorController import MotorController, MotorControllerState
 from ride_control_computer.RideTimer import RideTimer, RideTimingData
@@ -42,6 +43,7 @@ class RCC:
     __themingController: ThemingController
     __webserverController: WebserverController
     __sequencer: RideSequencer
+    __faultMonitor: FaultMonitor
 
     __state: RCCState
     __preEstopState: RCCState
@@ -75,6 +77,9 @@ class RCC:
             profile,
             onTimeout=lambda: self.__setState(RCCState.ESTOP),
         )
+
+        self.__faultMonitor = FaultMonitor()
+        self.__registerFaults()
 
         self.__state = RCCState.IDLE
         self.__preEstopState = RCCState.IDLE
@@ -112,7 +117,10 @@ class RCC:
             name="WebserverMainThread"
             ).start()
 
-        self.__motorController.start()
+        try:
+            self.__motorController.start()
+        except Exception as e:
+            logger.error(f"Motor controller failed to start: {e} — running in degraded mode")
 
         time.sleep(0.05)
 
@@ -190,14 +198,15 @@ class RCC:
             self.__checkResettingComplete()
 
     def __monitorSafety(self):
-        """Check hardware and software safety constraints; latch E-Stop on any violation."""
+        """Evaluate all fault conditions; latch E-Stop on any HIGH fault."""
         if self.__state in (RCCState.ESTOP, RCCState.RESETTING, RCCState.FAULT, RCCState.OFF):
             return
-        if self.__motorController.isEstopActive():
-            logger.warning("Hardware E-Stop detected — latching")
+        newlyActive = self.__faultMonitor.evaluate()
+        highFaults = [f for f in newlyActive if f.severity == FaultSeverity.HIGH]
+        if highFaults:
+            codes = ", ".join(f.code for f in highFaults)
+            logger.warning(f"High-severity fault(s) detected — latching E-Stop: {codes}")
             self.__setState(RCCState.ESTOP)
-        else:
-            self.__checkSafetyConstraints()
 
     # =========================================================================
     #                           TIMED STATE TRANSITIONS
@@ -230,14 +239,16 @@ class RCC:
     def __checkResettingComplete(self):
         """
         Called every loop tick while in RESETTING.
-        After RESETTING_DURATION_S, evaluates safety constraints.
-        Transitions to IDLE (or MAINTENANCE) if clear, back to ESTOP if faulted.
+        After RESETTING_DURATION_S, re-evaluates all faults.
+        Transitions to IDLE (or MAINTENANCE) if all clear, back to ESTOP if any fault is active.
         """
         elapsed = time.monotonic() - self.__stateEntryTime
         if elapsed >= self.RESETTING_DURATION_S:
-            violation = self.__evaluateConstraints()
-            if violation is not None:
-                logger.warning(f"Reset failed: {violation} — returning to E-Stop")
+            self.__faultMonitor.evaluate()
+            activeFaults = self.__faultMonitor.getActiveFaults()
+            if activeFaults:
+                codes = ", ".join(f.code for f in activeFaults)
+                logger.warning(f"Reset blocked: active fault(s) [{codes}] — returning to E-Stop")
                 self.__setState(RCCState.ESTOP)
             elif self.__preEstopState == RCCState.MAINTENANCE:
                 self.__setState(RCCState.MAINTENANCE)
@@ -245,34 +256,40 @@ class RCC:
                 self.__setState(RCCState.IDLE)
 
     # =========================================================================
-    #                           SAFETY
+    #                           FAULT REGISTRATION
     # =========================================================================
 
-    def __checkSafetyConstraints(self):
-        """
-        Run all safety constraint checks. If any constraint fails, latch E-Stop.
-        """
-        violation = self.__evaluateConstraints()
-        if violation is not None:
-            logger.warning(f"Safety constraint violated: {violation} — latching E-Stop")
-            self.__setState(RCCState.ESTOP)
+    def __registerFaults(self) -> None:
+        """Register all monitored fault conditions with the fault monitor."""
+        mc = self.__motorController
 
-    def __evaluateConstraints(self) -> str | None:
-        """
-        Evaluate all safety constraints.
-
-        Returns:
-            A description of the first violated constraint, or None if all pass.
-        """
-        if self.__motorController.isEstopActive():
-            return "MC E-Stop Active."
-        if self.__motorController.isTelemetryStale():
-            return f"MC Telemetry stale -> {self.__motorController.getTelemetryAge()}s since last fetch."
-        controllerStatus = self.__motorController.getControllerStatus()
-        if controllerStatus != "Normal":
-            return f"MC Abnormal Status: {controllerStatus}"
-
-        return None
+        self.__faultMonitor.register(Fault(
+            code="MC_COMM_FAILURE",
+            severity=FaultSeverity.HIGH,
+            description="Motor controller telemetry is stale — communication lost",
+            condition=mc.isTelemetryStale,
+        ))
+        self.__faultMonitor.register(Fault(
+            code="MC_ESTOP_ACTIVE",
+            severity=FaultSeverity.HIGH,
+            description="Hardware E-Stop is active on motor controller",
+            condition=mc.isEstopActive,
+        ))
+        self.__faultMonitor.register(Fault(
+            code="MC_STATUS_ABNORMAL",
+            severity=FaultSeverity.HIGH,
+            description="Motor controller reported an abnormal hardware status",
+            condition=lambda: mc.getControllerStatus() not in ("Normal", "E-Stop"),
+        ))
+        self.__faultMonitor.register(Fault(
+            code="MC_UNEXPECTED_MOTION",
+            severity=FaultSeverity.MEDIUM,
+            description="Motor motion detected while controller is in IDLE state",
+            condition=lambda: (
+                mc.getState() == MotorControllerState.IDLE
+                and any(abs(s) > 10 for s in (mc.getMotorSpeeds() or (0, 0)))
+            ),
+        ))
 
     # =========================================================================
     #                           PUBLIC ACCESSORS

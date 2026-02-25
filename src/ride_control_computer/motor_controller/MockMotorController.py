@@ -54,7 +54,7 @@ class MockMotorController(MotorController):
         return random.random()*100, random.random()*100
 
     def getMotorSpeeds(self) -> tuple[float, float]:
-        pass
+        return (0.0, 0.0)
 
     def getMotorPosition(self, motor: int) -> int:
         pass
