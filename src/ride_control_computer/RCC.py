@@ -278,7 +278,7 @@ class RCC:
         self.__faultMonitor.register(Fault(
             code="MC_STATUS_ABNORMAL",
             severity=FaultSeverity.HIGH,
-            description="Motor controller reported an abnormal hardware status",
+            description=lambda: f"Motor controller reported abnormal status: {mc.getControllerStatus()}",
             condition=lambda: mc.getControllerStatus() not in ("Normal", "E-Stop"),
         ))
         self.__faultMonitor.register(Fault(

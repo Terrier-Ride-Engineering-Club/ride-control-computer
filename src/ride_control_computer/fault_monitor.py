@@ -18,10 +18,11 @@ class FaultSeverity(Enum):
 @dataclass
 class Fault:
     """A single monitored fault condition."""
-    code: str                       # Unique identifier (e.g. "MC_COMM_FAILURE")
+    code: str                                # Unique identifier (e.g. "MC_COMM_FAILURE")
     severity: FaultSeverity
-    description: str                # Human-readable message logged on activation
-    condition: Callable[[], bool]   # Returns True when the fault is active
+    description: str | Callable[[], str]    # Human-readable message logged on activation;
+                                            # callable form is evaluated at fault-fire time
+    condition: Callable[[], bool]           # Returns True when the fault is active
     active: bool = field(default=False, init=False, repr=False)
 
 
@@ -63,12 +64,13 @@ class FaultMonitor:
                 fault.active = True   # Treat evaluation failure as an active fault
 
             if fault.active and not wasActive:
+                desc = fault.description() if callable(fault.description) else fault.description
                 if fault.severity == FaultSeverity.HIGH:
-                    logger.error(f"HIGH FAULT [{fault.code}]: {fault.description}")
+                    logger.error(f"HIGH FAULT [{fault.code}]: {desc}")
                 elif fault.severity == FaultSeverity.MEDIUM:
-                    logger.warning(f"MEDIUM FAULT [{fault.code}]: {fault.description}")
+                    logger.warning(f"MEDIUM FAULT [{fault.code}]: {desc}")
                 else:
-                    logger.info(f"LOW FAULT [{fault.code}]: {fault.description}")
+                    logger.info(f"LOW FAULT [{fault.code}]: {desc}")
                 newlyActive.append(fault)
 
             elif not fault.active and wasActive:
