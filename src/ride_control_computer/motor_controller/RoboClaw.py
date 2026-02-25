@@ -250,29 +250,47 @@ class RoboClaw:
         status, = self._read(Cmd.GETERROR, '>I')
 
         status_flags = {
-            0x0001: 'M1 OverCurrent Warning',
-            0x0002: 'M2 OverCurrent Warning',
-            0x0004: 'E-Stop',
-            0x0008: 'Temperature Error',
-            0x0010: 'Temperature2 Error',
-            0x0020: 'Main Battery High Error',
-            0x0040: 'Logic Battery High Error',
-            0x0080: 'Logic Battery Low Error',
-            0x0100: 'M1 Driver Fault',
-            0x0200: 'M2 Driver Fault',
-            0x0400: 'Main Battery High Warning',
-            0x0800: 'Main Battery Low Warning',
-            0x1000: 'Temperature Warning',
-            0x2000: 'Temperature2 Warning',
-            0x4000: 'M1 Home',
-            0x8000: 'M2 Home',
+            0x00000001: 'E-Stop',
+            0x00000002: 'Temperature Error',
+            0x00000004: 'Temperature 2 Error',
+            0x00000008: 'Main Voltage High Error',
+            0x00000010: 'Logic Voltage High Error',
+            0x00000020: 'Logic Voltage Low Error',
+            0x00000040: 'M1 Driver Fault Error',
+            0x00000080: 'M2 Driver Fault Error',
+            0x00000100: 'M1 Speed Error',
+            0x00000200: 'M2 Speed Error',
+            0x00000400: 'M1 Position Error',
+            0x00000800: 'M2 Position Error',
+            0x00001000: 'M1 Current Error',
+            0x00002000: 'M2 Current Error',
+            0x00010000: 'M1 Over Current Warning',
+            0x00020000: 'M2 Over Current Warning',
+            0x00040000: 'Main Voltage High Warning',
+            0x00080000: 'Main Voltage Low Warning',
+            0x00100000: 'Temperature Warning',
+            0x00200000: 'Temperature 2 Warning',
+            0x00400000: 'S4 Signal Triggered',
+            0x00800000: 'S5 Signal Triggered',
+            0x01000000: 'Speed Error Limit Warning',
+            0x02000000: 'Position Error Limit Warning',
         }
 
         if status == 0:
             return 'Normal'
 
-        active = [name for bit, name in status_flags.items() if status & bit]
-        return ', '.join(active) if active else f'Unknown Status: 0x{status:04X}'
+        known_mask = 0
+        active = []
+        for bit, name in status_flags.items():
+            if status & bit:
+                active.append(name)
+            known_mask |= bit
+
+        unknown_bits = status & ~known_mask
+        if unknown_bits:
+            active.append(f'Unknown (0x{unknown_bits:08X})')
+
+        return ', '.join(active)
 
     def read_temp_sensor(self, sensor: int) -> float:
         """
