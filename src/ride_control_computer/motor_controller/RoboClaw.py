@@ -247,7 +247,7 @@ class RoboClaw:
         Returns:
             Human-readable status string
         """
-        status, = self._read(Cmd.GETERROR, '>H')
+        status, = self._read(Cmd.GETERROR, '>I')
 
         status_flags = {
             0x0001: 'M1 OverCurrent Warning',
