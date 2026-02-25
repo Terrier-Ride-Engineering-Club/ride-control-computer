@@ -17,6 +17,7 @@ dependencies = [
   "flask>=3.0",
   "waitress>=3.0",
   "gpiozero>=2.0",
+  "lgpio"
 ]
 
 [project.optional-dependencies]
