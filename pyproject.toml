@@ -7,7 +7,7 @@ name = "ride-control-computer"
 version = "0.1.0"
 description = "Ride Control Computer (RCC) software"
 readme = "README.md"
-requires-python = "==3.13"
+requires-python = "==3.13.5"
 license = { text = "MIT" }
 authors = [{ name = "Jack Justus" }]
 
