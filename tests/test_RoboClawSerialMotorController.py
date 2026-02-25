@@ -2,7 +2,6 @@ import time
 import threading
 from unittest.mock import patch, MagicMock
 from ride_control_computer.motor_controller.MotorController import MotorControllerState
-from ride_control_computer.motor_controller.RoboClaw import RoboClaw
 from ride_control_computer.motor_controller.RoboClawSerialMC import RoboClawSerialMotorController
 
 
@@ -31,7 +30,7 @@ class TestRoboClawSerialMotorController():
             "ride_control_computer.motor_controller.RoboClawSerialMC.RoboClaw"
         ) as mockCls:
             roboClaw = _configureDefaultMock(mockCls)
-            controller = RoboClawSerialMotorController(roboClaw)
+            controller = RoboClawSerialMotorController(['mock_port'])
             controller.start()
             time.sleep(0.05)  # let cache populate with fast values
             assert not controller.isTelemetryStale()
@@ -64,7 +63,7 @@ class TestRoboClawSerialMotorController():
                 "ride_control_computer.motor_controller.RoboClawSerialMC.RoboClaw"
         ) as mockCls:
             roboClaw = _configureDefaultMock(mockCls)
-            controller = RoboClawSerialMotorController(roboClaw)
+            controller = RoboClawSerialMotorController(['mock_port'])
             controller.start()
             time.sleep(0.05)
             assert controller.getState() is MotorControllerState.IDLE
@@ -75,7 +74,7 @@ class TestRoboClawSerialMotorController():
         ) as mockCls:
             roboClaw = _configureDefaultMock(mockCls)
             roboClaw.read_status.return_value = "E-Stop"
-            controller = RoboClawSerialMotorController(roboClaw)
+            controller = RoboClawSerialMotorController(['mock_port'])
             controller.start()
             assert controller.getState() is MotorControllerState.DISABLED
             time.sleep(0.05)
@@ -88,7 +87,7 @@ class TestRoboClawSerialMotorController():
                 "ride_control_computer.motor_controller.RoboClawSerialMC.RoboClaw"
         ) as mockCls:
             roboClaw = _configureDefaultMock(mockCls)
-            controller = RoboClawSerialMotorController(roboClaw)
+            controller = RoboClawSerialMotorController(['mock_port'])
             controller.start()
             time.sleep(0.05)
             # Ride lifecycle is managed by RideSequencer at the RCC level; MC stays IDLE

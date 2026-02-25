@@ -6,8 +6,6 @@ import logging
 from datetime import datetime
 from pathlib import Path
 
-import serial.serialutil
-
 from ride_control_computer.RCC import RCC
 from ride_control_computer.control_panel.MockControlPanel import MockControlPanel
 from ride_control_computer.motor_controller.MockMotorController import MockMotorController
@@ -42,29 +40,15 @@ def main():
         logger = logging.getLogger(__name__)
         logger.info("Starting with HARDWARE implementations")
 
-        from ride_control_computer.motor_controller.RoboClaw import RoboClaw
         from ride_control_computer.motor_controller.RoboClawSerialMC import RoboClawSerialMotorController
 
-        # Try ports in order until one works
         ROBOCLAW_PORTS = [
             '/dev/ttyAMA1',   # Pi GPIO serial
             '/dev/ttyACM0',   # USB (Pi)
             '/dev/ttyACM1',   # USB (Pi fallback)
         ]
 
-        roboclaw = None
-        for port in ROBOCLAW_PORTS:
-            try:
-                roboclaw = RoboClaw(port=port)
-                logger.info(f"RoboClaw connected on {port}")
-                break
-            except serial.serialutil.SerialException:
-                logger.debug(f"RoboClaw not found on {port}")
-
-        if roboclaw is None:
-            raise RuntimeError(f"RoboClaw not found on any port: {ROBOCLAW_PORTS}")
-
-        mc = RoboClawSerialMotorController(roboclaw)
+        mc = RoboClawSerialMotorController(ROBOCLAW_PORTS)
         # TODO: Add hardware ControlPanel when implemented
         cp = MockControlPanel()
         # TODO: Add hardware ThemingController when implemented

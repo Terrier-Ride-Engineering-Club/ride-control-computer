@@ -3,6 +3,7 @@
 
 import time
 import logging
+import serial.serialutil
 from threading import Thread, Event, Lock
 
 from gpiozero import Button
@@ -42,12 +43,22 @@ class RoboClawSerialMotorController(MotorController):
     JOG_ACCELERATION = 200
     STOP_DECELERATION = 300
     HALT_DECELERATION = 10000
-    STOPPED_THRESHOLD = 5  # QPPS — below this, motors are considered stopped
+    STOPPED_THRESHOLD = 5    # QPPS — below this, motors are considered stopped
+    RECONNECT_INTERVAL_S = 5.0  # seconds between reconnection attempts
 
-    def __init__(self, roboClaw: RoboClaw):
+    def __init__(self, ports: list[str], address: int = 0x80):
+        """
+        Args:
+            ports: Serial port paths to try in order (e.g. ['/dev/ttyAMA1', '/dev/ttyACM0']).
+                   The MC will try each port on startup and on every reconnection attempt.
+            address: RoboClaw packet serial address (default 0x80).
+        """
         super().__init__()
 
-        self._roboClaw = roboClaw
+        self._ports = ports
+        self._address = address
+        self._roboClaw: RoboClaw | None = None   # Managed internally; None when disconnected
+        self._lastConnectAttempt: float = 0.0
 
         # State (written by main thread, read by serial thread)
         self._state = MotorControllerState.DISABLED
@@ -90,13 +101,14 @@ class RoboClawSerialMotorController(MotorController):
     # =========================================================================
 
     def start(self):
-        """Initialize hardware and start the serial communication thread."""
+        """Attempt initial connection and start the background serial thread.
+
+        If no port is reachable on startup the thread still starts and will
+        retry every RECONNECT_INTERVAL_S seconds until a device is found.
+        """
         logger.info("Starting RoboClawSerialMotorController")
+        self._tryConnect()   # Best-effort; background thread retries on failure
 
-        version = self._roboClaw.read_version()
-        logger.info(f"Connected to RoboClaw: {version}")
-
-        # Start serial thread
         self._stopEvent.clear()
         self._controlThread = Thread(
             target=self._controlLoop,
@@ -104,7 +116,21 @@ class RoboClawSerialMotorController(MotorController):
             name="RoboClawSerial"
         )
         self._controlThread.start()
-        self._attemptReset()
+
+    def _tryConnect(self) -> bool:
+        """Try each configured port in order. Returns True if a device was found."""
+        for port in self._ports:
+            try:
+                rc = RoboClaw(port=port, address=self._address)
+                version = rc.read_version()
+                logger.info(f"RoboClaw connected on {port}: {version}")
+                self._roboClaw = rc
+                self._attemptReset()
+                return True
+            except Exception as e:
+                logger.debug(f"RoboClaw not available on {port}: {e}")
+        logger.warning(f"RoboClaw not found on any port: {self._ports}")
+        return False
 
     def shutdown(self):
         """Stop all motion and clean up."""
@@ -126,6 +152,8 @@ class RoboClawSerialMotorController(MotorController):
     # =========================================================================
 
     def driveToPosition(self, motor: int, position: int, speed: int, accel: int, decel: int) -> None:
+        if self._roboClaw is None:
+            return
         self._targetPositions[motor] = position
         self._roboClaw.drive_to_position_with_speed_acceleration_deceleration(
             motor, position, speed, accel, decel
@@ -284,6 +312,14 @@ class RoboClawSerialMotorController(MotorController):
             self._loop_timer.tick()
             now = time.monotonic()
 
+            if self._roboClaw is None:
+                if now - self._lastConnectAttempt >= self.RECONNECT_INTERVAL_S:
+                    self._lastConnectAttempt = now
+                    logger.info("Attempting to reconnect to RoboClaw...")
+                    self._tryConnect()
+                self._stopEvent.wait(0.1)
+                continue
+
             try:
                 if now - lastWrite >= writeInterval:
                     lastWrite = now
@@ -293,6 +329,14 @@ class RoboClawSerialMotorController(MotorController):
                     lastRead = now
                     self._pollTelemetry()
                     self._checkStateTransitions()
+
+            except serial.serialutil.SerialException as e:
+                logger.error(f"Serial communication lost: {e} — will retry in {self.RECONNECT_INTERVAL_S}s")
+                self._roboClaw = None
+                self._setState(MotorControllerState.DISABLED)
+                with self._telemetryLock:
+                    self._telemetry.lastUpdate = 0.0   # Force isTelemetryStale() → True immediately
+
             except Exception as e:
                 logger.error(f"Control loop error: {e}")
 
