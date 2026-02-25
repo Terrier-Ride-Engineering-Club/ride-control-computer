@@ -258,7 +258,7 @@ class RoboClawSerialMotorController(MotorController):
 
     def isEstopActive(self):
         with self._telemetryLock:
-            return self._telemetry.status == "E-Stop"
+            return "E-Stop" in self._telemetry.status
 
     # =========================================================================
     #                           TELEMETRY HEALTH
