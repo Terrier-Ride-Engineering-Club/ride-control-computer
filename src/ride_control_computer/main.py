@@ -34,6 +34,11 @@ def main():
         action="store_true",
         help="Use hardware implementations instead of mocks (for Pi deployment)"
     )
+    parser.add_argument(
+        "--web-panel",
+        action="store_true",
+        help="Use WebControlPanel (browser UI) instead of the physical RCP hardware"
+    )
     args = parser.parse_args()
 
     if args.hardware:
@@ -50,8 +55,6 @@ def main():
         WATCHDOG_PORT = '/dev/ttyUSB0'  # Arduino Nano (PLC) via USB CDC
 
         mc = RoboClawSerialMotorController(ROBOCLAW_PORTS)
-        from ride_control_computer.control_panel.HardwareControlPanel import HardwareControlPanel
-        cp = HardwareControlPanel()
         # TODO: Add hardware ThemingController when implemented
         tc = MockThemingController()
     else:
@@ -61,8 +64,18 @@ def main():
         WATCHDOG_PORT = None
 
         mc = MockMotorController()
-        cp = MockControlPanel()
         tc = MockThemingController()
+
+    if args.web_panel:
+        logger = logging.getLogger(__name__)
+        logger.info("Control panel: WEB (http://0.0.0.0:5001)")
+        from ride_control_computer.control_panel.WebControlPanel import WebControlPanel
+        cp = WebControlPanel()
+    elif args.hardware:
+        from ride_control_computer.control_panel.HardwareControlPanel import HardwareControlPanel
+        cp = HardwareControlPanel()
+    else:
+        cp = MockControlPanel()
 
     wc = MockWebserverController(
         getSpeeds=mc.getMotorSpeeds,
