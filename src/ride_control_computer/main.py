@@ -49,8 +49,8 @@ def main():
         ]
 
         mc = RoboClawSerialMotorController(ROBOCLAW_PORTS)
-        # TODO: Add hardware ControlPanel when implemented
-        cp = MockControlPanel()
+        from ride_control_computer.control_panel.HardwareControlPanel import HardwareControlPanel
+        cp = HardwareControlPanel()
         # TODO: Add hardware ThemingController when implemented
         tc = MockThemingController()
     else:
