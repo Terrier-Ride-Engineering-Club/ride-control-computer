@@ -242,7 +242,11 @@ class RoboClaw:
 
     def read_status(self) -> tuple[str, int]:
         """
-        Read the current error/status state of the controller.
+        Read the current error/status state of the controller (command 90).
+
+        Error flags persist until the device is reset, except Emergency Stop
+        which clears on read like a warning.  Warning flags clear automatically
+        on read.
 
         Returns:
             (human_readable_str, raw_register_uint32)
@@ -250,30 +254,34 @@ class RoboClaw:
         status, = self._read(Cmd.GETERROR, '>I')
 
         status_flags = {
+            # --- Errors (persist until reset; E-Stop clears on read) ---
             0x00000001: 'E-Stop',
             0x00000002: 'Temperature Error',
             0x00000004: 'Temperature 2 Error',
-            0x00000008: 'Main Voltage High Error',
             0x00000010: 'Logic Voltage High Error',
             0x00000020: 'Logic Voltage Low Error',
-            0x00000040: 'M1 Driver Fault Error',
-            0x00000080: 'M2 Driver Fault Error',
-            0x00000100: 'M1 Speed Error',
-            0x00000200: 'M2 Speed Error',
-            0x00000400: 'M1 Position Error',
-            0x00000800: 'M2 Position Error',
-            0x00001000: 'M1 Current Error',
-            0x00002000: 'M2 Current Error',
-            0x00010000: 'M1 Over Current Warning',
-            0x00020000: 'M2 Over Current Warning',
+            0x00000040: 'Motor 1 Fault Error',
+            0x00000080: 'Motor 2 Fault Error',
+            0x00000100: 'Motor 1 Speed Error',
+            0x00000200: 'Motor 2 Speed Error',
+            0x00000400: 'Motor 1 Position Error',
+            0x00000800: 'Motor 2 Position Error',
+            0x00001000: 'Motor Current 1 Error',
+            0x00002000: 'Motor Current 2 Error',
+            # --- Warnings (clear on read) ---
+            0x00010000: 'Over Current 1 Warning',
+            0x00020000: 'Over Current 2 Warning',
             0x00040000: 'Main Voltage High Warning',
             0x00080000: 'Main Voltage Low Warning',
             0x00100000: 'Temperature Warning',
             0x00200000: 'Temperature 2 Warning',
-            0x00400000: 'S4 Signal Triggered',
-            0x00800000: 'S5 Signal Triggered',
-            0x01000000: 'Speed Error Limit Warning',
-            0x02000000: 'Position Error Limit Warning',
+            0x00400000: 'S4 Limit Switch Warning',
+            0x00800000: 'S5 Limit Switch Warning',
+            0x01000000: 'Idle Motor 1 Warning',
+            0x02000000: 'Idle Motor 2 Warning',
+            0x20000000: 'Reset Warning',
+            0x40000000: 'Over Regen Motor 1 Warning',
+            0x80000000: 'Over Regen Motor 2 Warning',
         }
 
         if status == 0:
