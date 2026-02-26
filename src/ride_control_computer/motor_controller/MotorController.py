@@ -24,6 +24,7 @@ class ControllerTelemetry:
     motors: dict[int, MotorTelemetry] = field(default_factory=lambda: {1: MotorTelemetry(), 2: MotorTelemetry()})
     voltage: float = 0.0
     status: str = "Unknown"
+    rawStatus: int = 0
     temp1: float = 0.0
     temp2: float = 0.0
     lastUpdate: float = 0.0
@@ -245,6 +246,29 @@ class MotorController(ABC):
 
         Returns:
             Human-readable status string (e.g., "Normal", "E-Stop", "M1 Over Current Warning")
+        """
+        ...
+
+    @abstractmethod
+    def getRawControllerStatus(self) -> int:
+        """
+        Gets the raw hardware status register value.
+
+        Returns:
+            Raw uint32 status register (0 = Normal).
+        """
+        ...
+
+    @abstractmethod
+    def getLastMotorCommand(self, motor: int) -> tuple[int, int, int, int] | None:
+        """
+        Gets the last position command issued to a motor.
+
+        Args:
+            motor: Motor number (1 or 2)
+
+        Returns:
+            (position, speed, accel, decel) tuple, or None if no command has been issued.
         """
         ...
 

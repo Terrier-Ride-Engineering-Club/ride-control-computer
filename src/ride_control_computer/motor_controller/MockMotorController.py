@@ -77,6 +77,12 @@ class MockMotorController(MotorController):
     def getControllerStatus(self) -> str:
         return "Normal"
 
+    def getRawControllerStatus(self) -> int:
+        return 0
+
+    def getLastMotorCommand(self, motor: int) -> tuple[int, int, int, int] | None:
+        return None
+
     # =========================================================================
     #                           STATE
     # =========================================================================

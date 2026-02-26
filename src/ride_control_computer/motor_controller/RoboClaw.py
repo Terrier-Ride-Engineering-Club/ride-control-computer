@@ -240,12 +240,12 @@ class RoboClaw:
         cmd = Cmd.READM1PID if motor == 1 else Cmd.READM2PID
         return self._read(cmd, '>IIII')[3]
 
-    def read_status(self) -> str:
+    def read_status(self) -> tuple[str, int]:
         """
         Read the current error/status state of the controller.
 
         Returns:
-            Human-readable status string
+            (human_readable_str, raw_register_uint32)
         """
         status, = self._read(Cmd.GETERROR, '>I')
 
@@ -277,7 +277,7 @@ class RoboClaw:
         }
 
         if status == 0:
-            return 'Normal'
+            return 'Normal', 0
 
         known_mask = 0
         active = []
@@ -290,7 +290,7 @@ class RoboClaw:
         if unknown_bits:
             active.append(f'Unknown (0x{unknown_bits:08X})')
 
-        return ', '.join(active)
+        return ', '.join(active), status
 
     def read_temp_sensor(self, sensor: int) -> float:
         """

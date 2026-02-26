@@ -86,6 +86,8 @@ class RoboClawSerialMotorController(MotorController):
         }
         # Last commanded position per motor (for isMotorNearTarget)
         self._targetPositions: dict[int, int | None] = {1: None, 2: None}
+        # Last full drive command per motor (for watchdog telemetry)
+        self._lastDriveCommand: dict[int, tuple[int, int, int, int] | None] = {1: None, 2: None}
         # Motors currently being homed
         self._homingMotors: list[int] = []
 
@@ -155,6 +157,7 @@ class RoboClawSerialMotorController(MotorController):
         if self._roboClaw is None:
             return
         self._targetPositions[motor] = position
+        self._lastDriveCommand[motor] = (position, speed, accel, decel)
         self._roboClaw.drive_to_position_with_speed_acceleration_deceleration(
             motor, position, speed, accel, decel
         )
@@ -255,6 +258,13 @@ class RoboClawSerialMotorController(MotorController):
     def getControllerStatus(self):
         with self._telemetryLock:
             return self._telemetry.status
+
+    def getRawControllerStatus(self) -> int:
+        with self._telemetryLock:
+            return self._telemetry.rawStatus
+
+    def getLastMotorCommand(self, motor: int) -> tuple[int, int, int, int] | None:
+        return self._lastDriveCommand[motor]
 
     def isEstopActive(self):
         with self._telemetryLock:
@@ -376,7 +386,7 @@ class RoboClawSerialMotorController(MotorController):
         pollingStartTime = time.time()
 
         # Read from hardware
-        status = self._roboClaw.read_status()
+        status, rawStatus = self._roboClaw.read_status()
         voltage = self._roboClaw.read_batt_voltage()
         currents = self._roboClaw.read_currents()
         temp1 = self._roboClaw.read_temp_sensor(1)
@@ -406,6 +416,7 @@ class RoboClawSerialMotorController(MotorController):
             self._telemetry.motors = motorData
             self._telemetry.voltage = voltage
             self._telemetry.status = status
+            self._telemetry.rawStatus = rawStatus
             self._telemetry.temp1 = temp1
             self._telemetry.temp2 = temp2
             self._telemetry.lastUpdate = pollingStartTime

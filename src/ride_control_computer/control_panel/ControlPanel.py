@@ -107,7 +107,7 @@ class ControlPanel(ABC):
         self._addListToCallbackQueue([partial(cb, state) for cb in self.__estopCallbacks])
 
     def _enqueueMaintenanceSwitch(self, state: SustainedSwitchState) -> None:
-        self._addListToCallbackQueue([partial(cb, state) for cb in self.__maintenanceSwitchCallbacks])
+        self._addListToCallbackQueue([partial(cb, state) for cb in self.__powerSwitchCallbacks])
 
     def _enqueueMaintenanceJogSwitch(self, state: MomentarySwitchState) -> None:
         self._addListToCallbackQueue([partial(cb, state) for cb in self.__maintenanceJogSwitchCallbacks])

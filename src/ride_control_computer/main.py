@@ -47,6 +47,7 @@ def main():
             '/dev/ttyACM0',   # USB (Pi)
             '/dev/ttyACM1',   # USB (Pi fallback)
         ]
+        WATCHDOG_PORT = '/dev/ttyUSB0'  # Arduino Nano (PLC) via USB CDC
 
         mc = RoboClawSerialMotorController(ROBOCLAW_PORTS)
         from ride_control_computer.control_panel.HardwareControlPanel import HardwareControlPanel
@@ -56,6 +57,8 @@ def main():
     else:
         logger = logging.getLogger(__name__)
         logger.info("Starting with MOCK implementations")
+
+        WATCHDOG_PORT = None
 
         mc = MockMotorController()
         cp = MockControlPanel()
@@ -69,7 +72,7 @@ def main():
         themeStatus=tc.status
     )
 
-    rideControlComputer = RCC(mc, cp, tc, wc)
+    rideControlComputer = RCC(mc, cp, tc, wc, watchdogPort=WATCHDOG_PORT)
     rideControlComputer.run()
 
 if __name__ == '__main__':

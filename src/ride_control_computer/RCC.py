@@ -64,7 +64,9 @@ class RCC:
             motorController: MotorController,
             controlPanel: ControlPanel,
             themingController: ThemingController,
-            webserverController: WebserverController
+            webserverController: WebserverController,
+            watchdogPort: str | None = None,
+            watchdogBaud: int = 115200,
             ):
         self.__motorController = motorController
         self.__controlPanel = controlPanel
@@ -80,6 +82,23 @@ class RCC:
 
         self.__faultMonitor = FaultMonitor()
         self.__registerFaults()
+
+        if watchdogPort is not None:
+            from ride_control_computer.plc_watchdog import PLCWatchdog
+            self.__watchdog: PLCWatchdog | None = PLCWatchdog(
+                port=watchdogPort,
+                baud=watchdogBaud,
+                getRccState=self.getState,
+                mc=motorController,
+            )
+            self.__faultMonitor.register(Fault(
+                code="WATCHDOG_PLC_TIMEOUT",
+                severity=FaultSeverity.HIGH,
+                description="No valid packet received from PLC within watchdog timeout",
+                condition=self.__watchdog.isTimedOut,
+            ))
+        else:
+            self.__watchdog = None
 
         self.__state = RCCState.IDLE
         self.__preEstopState = RCCState.IDLE
@@ -121,6 +140,9 @@ class RCC:
             self.__motorController.start()
         except Exception as e:
             logger.error(f"Motor controller failed to start: {e} — running in degraded mode")
+
+        if self.__watchdog is not None:
+            self.__watchdog.start()
 
         time.sleep(0.05)
 

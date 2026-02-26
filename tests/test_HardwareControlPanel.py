@@ -31,24 +31,24 @@ class TestMomentaryInput:
     def testPressEnqueuesPressed(self):
         received = []
         inp = MomentaryInput(17, received.append)
-        inp.btn.pin.drive_low()
+        inp.btn.pin.drive_high()
         inp.poll()
         assert received == [MomentaryButtonState.PRESSED]
 
     def testReleaseEnqueuesReleased(self):
         received = []
         inp = MomentaryInput(17, received.append)
-        inp.btn.pin.drive_low()
+        inp.btn.pin.drive_high()
         inp.poll()
         received.clear()
-        inp.btn.pin.drive_high()
+        inp.btn.pin.drive_low()
         inp.poll()
         assert received == [MomentaryButtonState.RELEASED]
 
     def testNoDuplicateOnSameState(self):
         received = []
         inp = MomentaryInput(17, received.append)
-        inp.btn.pin.drive_low()
+        inp.btn.pin.drive_high()
         inp.poll()
         received.clear()
         inp.poll()
@@ -57,11 +57,11 @@ class TestMomentaryInput:
     def testMultiplePressReleaseCycles(self):
         received = []
         inp = MomentaryInput(17, received.append)
-        inp.btn.pin.drive_low()
-        inp.poll()
         inp.btn.pin.drive_high()
         inp.poll()
         inp.btn.pin.drive_low()
+        inp.poll()
+        inp.btn.pin.drive_high()
         inp.poll()
         assert received == [
             MomentaryButtonState.PRESSED,
@@ -87,31 +87,31 @@ class TestThreePositionSwitch:
     def testSwitchToPositionA(self):
         received = []
         sw = self._makeSwitch(received.append)
-        sw.btnA.pin.drive_low()
+        sw.btnA.pin.drive_high()
         sw.poll()
         assert received == [SustainedSwitchState.ON]
 
     def testSwitchToPositionB(self):
         received = []
         sw = self._makeSwitch(received.append)
-        sw.btnB.pin.drive_low()
+        sw.btnB.pin.drive_high()
         sw.poll()
         assert received == [SustainedSwitchState.MAINTENANCE]
 
     def testReturnToNeutral(self):
         received = []
         sw = self._makeSwitch(received.append)
-        sw.btnA.pin.drive_low()
+        sw.btnA.pin.drive_high()
         sw.poll()
         received.clear()
-        sw.btnA.pin.drive_high()
+        sw.btnA.pin.drive_low()
         sw.poll()
         assert received == [SustainedSwitchState.OFF]
 
     def testNoDuplicateOnSameState(self):
         received = []
         sw = self._makeSwitch(received.append)
-        sw.btnA.pin.drive_low()
+        sw.btnA.pin.drive_high()
         sw.poll()
         received.clear()
         sw.poll()
@@ -120,10 +120,10 @@ class TestThreePositionSwitch:
     def testReadReturnsCurrentState(self):
         sw = self._makeSwitch(lambda _: None)
         assert sw.read() == SustainedSwitchState.OFF
-        sw.btnA.pin.drive_low()
-        assert sw.read() == SustainedSwitchState.ON
         sw.btnA.pin.drive_high()
-        sw.btnB.pin.drive_low()
+        assert sw.read() == SustainedSwitchState.ON
+        sw.btnA.pin.drive_low()
+        sw.btnB.pin.drive_high()
         assert sw.read() == SustainedSwitchState.MAINTENANCE
 
 
@@ -144,13 +144,13 @@ class TestHardwareControlPanel:
         received = []
         panel.addDispatchCallback(received.append)
 
-        panel._buttons[0].btn.pin.drive_low()
+        panel._buttons[0].btn.pin.drive_high()
         self._pollOnce(panel)
         panel.triggerCallbacks()
         assert received == [MomentaryButtonState.PRESSED]
 
         received.clear()
-        panel._buttons[0].btn.pin.drive_high()
+        panel._buttons[0].btn.pin.drive_low()
         self._pollOnce(panel)
         panel.triggerCallbacks()
         assert received == [MomentaryButtonState.RELEASED]
@@ -160,7 +160,7 @@ class TestHardwareControlPanel:
         received = []
         panel.addResetCallback(received.append)
 
-        panel._buttons[1].btn.pin.drive_low()
+        panel._buttons[1].btn.pin.drive_high()
         self._pollOnce(panel)
         panel.triggerCallbacks()
         assert received == [MomentaryButtonState.PRESSED]
@@ -170,7 +170,7 @@ class TestHardwareControlPanel:
         received = []
         panel.addStopCallback(received.append)
 
-        panel._buttons[2].btn.pin.drive_low()
+        panel._buttons[2].btn.pin.drive_high()
         self._pollOnce(panel)
         panel.triggerCallbacks()
         assert received == [MomentaryButtonState.PRESSED]
@@ -180,7 +180,7 @@ class TestHardwareControlPanel:
         received = []
         panel.addEstopCallback(received.append)
 
-        panel._buttons[3].btn.pin.drive_low()
+        panel._buttons[3].btn.pin.drive_high()
         self._pollOnce(panel)
         panel.triggerCallbacks()
         assert received == [MomentaryButtonState.PRESSED]
@@ -188,23 +188,23 @@ class TestHardwareControlPanel:
     def testMaintenanceSwitchAllPositions(self):
         panel = HardwareControlPanel()
         received = []
-        panel.addMaintenanceSwitchCallback(received.append)
+        panel.addPowerSwitchCallback(received.append)
 
         # OFF -> ON
-        panel._maintSwitch.btnA.pin.drive_low()
+        panel._maintSwitch.btnA.pin.drive_high()
         self._pollOnce(panel)
         panel.triggerCallbacks()
         assert received[-1] == SustainedSwitchState.ON
 
         # ON -> MAINTENANCE
-        panel._maintSwitch.btnA.pin.drive_high()
-        panel._maintSwitch.btnB.pin.drive_low()
+        panel._maintSwitch.btnA.pin.drive_low()
+        panel._maintSwitch.btnB.pin.drive_high()
         self._pollOnce(panel)
         panel.triggerCallbacks()
         assert received[-1] == SustainedSwitchState.MAINTENANCE
 
         # MAINTENANCE -> OFF
-        panel._maintSwitch.btnB.pin.drive_high()
+        panel._maintSwitch.btnB.pin.drive_low()
         self._pollOnce(panel)
         panel.triggerCallbacks()
         assert received[-1] == SustainedSwitchState.OFF
@@ -217,19 +217,19 @@ class TestHardwareControlPanel:
         panel.addMaintenanceJogSwitchCallback(received.append)
 
         # NEUTRAL -> UP
-        panel._jogSwitch.btnA.pin.drive_low()
+        panel._jogSwitch.btnA.pin.drive_high()
         self._pollOnce(panel)
         panel.triggerCallbacks()
         assert received[-1] == MomentarySwitchState.UP
 
         # UP -> NEUTRAL
-        panel._jogSwitch.btnA.pin.drive_high()
+        panel._jogSwitch.btnA.pin.drive_low()
         self._pollOnce(panel)
         panel.triggerCallbacks()
         assert received[-1] == MomentarySwitchState.NEUTRAL
 
         # NEUTRAL -> DOWN
-        panel._jogSwitch.btnB.pin.drive_low()
+        panel._jogSwitch.btnB.pin.drive_high()
         self._pollOnce(panel)
         panel.triggerCallbacks()
         assert received[-1] == MomentarySwitchState.DOWN
@@ -243,7 +243,7 @@ class TestHardwareControlPanel:
         panel.addDispatchCallback(receivedA.append)
         panel.addDispatchCallback(receivedB.append)
 
-        panel._buttons[0].btn.pin.drive_low()
+        panel._buttons[0].btn.pin.drive_high()
         self._pollOnce(panel)
         panel.triggerCallbacks()
 
@@ -257,7 +257,7 @@ class TestHardwareControlPanel:
         panel.addResetCallback(received.append)
         panel.addStopCallback(received.append)
         panel.addEstopCallback(received.append)
-        panel.addMaintenanceSwitchCallback(received.append)
+        panel.addPowerSwitchCallback(received.append)
         panel.addMaintenanceJogSwitchCallback(received.append)
 
         for _ in range(5):
@@ -271,7 +271,7 @@ class TestHardwareControlPanel:
         received = []
         panel.addDispatchCallback(received.append)
 
-        panel._buttons[0].btn.pin.drive_low()
+        panel._buttons[0].btn.pin.drive_high()
         self._pollOnce(panel)
         assert received == []
 
