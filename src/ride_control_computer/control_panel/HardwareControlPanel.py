@@ -13,15 +13,15 @@ from ride_control_computer.control_panel.ControlPanel import (
 
 logger = logging.getLogger(__name__)
 
-# BCM GPIO pin numbers (active-low with internal pull-ups)
-PIN_DISPATCH = 17
-PIN_RESET = 27
-PIN_STOP = 22
-PIN_ESTOP = 23
-PIN_MAINT_ON = 24           # Maintenance switch "ON" position
-PIN_MAINT_MAINTENANCE = 25  # Maintenance switch "MAINTENANCE" position
-PIN_JOG_UP = 5              # Jog switch "UP" position
-PIN_JOG_DOWN = 6            # Jog switch "DOWN" position
+# BCM GPIO pin numbers (active-high with internal pull-downs)
+PIN_DISPATCH = 10
+PIN_RESET = 9
+PIN_STOP = 11
+PIN_ESTOP = 5
+PIN_MAINT_ON = 4           # Maintenance switch "ON" position
+PIN_MAINT_MAINTENANCE = 17  # Maintenance switch "MAINTENANCE" position
+PIN_JOG_UP = 27              # Jog switch "UP" position
+PIN_JOG_DOWN = 22            # Jog switch "DOWN" position
 
 DEBOUNCE_TIME = 0.05  # 50ms debounce
 
@@ -30,7 +30,7 @@ class MomentaryInput:
     """Tracks a single momentary push button with edge detection."""
 
     def __init__(self, pin: int, enqueue: Callable):
-        self.btn = Button(pin, pull_up=True, bounce_time=DEBOUNCE_TIME)
+        self.btn = Button(pin, pull_up=False, bounce_time=DEBOUNCE_TIME)
         self.enqueue = enqueue
         self.wasPressed = False
 
@@ -47,8 +47,8 @@ class ThreePositionSwitch:
     """Tracks a 3-position switch (2 GPIO pins) with change detection."""
 
     def __init__(self, pinA: int, pinB: int, stateA, stateB, stateNeutral, enqueue: Callable):
-        self.btnA = Button(pinA, pull_up=True, bounce_time=DEBOUNCE_TIME)
-        self.btnB = Button(pinB, pull_up=True, bounce_time=DEBOUNCE_TIME)
+        self.btnA = Button(pinA, pull_up=False, bounce_time=DEBOUNCE_TIME)
+        self.btnB = Button(pinB, pull_up=False, bounce_time=DEBOUNCE_TIME)
         self.stateA = stateA
         self.stateB = stateB
         self.stateNeutral = stateNeutral
