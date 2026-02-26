@@ -1,6 +1,5 @@
 from ride_control_computer.motor_controller.MotorController import MotorControllerState, MotorController
 import random
-import time
 
 class MockMotorController(MotorController):
 
@@ -12,10 +11,17 @@ class MockMotorController(MotorController):
     # =========================================================================
 
     def start(self):
-        pass
+        self._state = MotorControllerState.ACTIVE
 
     def shutdown(self):
         pass
+
+    # =========================================================================
+    #                           HEARTBEAT
+    # =========================================================================
+
+    def heartbeat(self) -> None:
+        pass  # No serial thread to authorize
 
     # =========================================================================
     #                           COMMANDS
@@ -25,8 +31,7 @@ class MockMotorController(MotorController):
         pass  # No-op: mock reports isMotorNearTarget=True immediately
 
     def homeMotors(self, motors: list[int]) -> None:
-        # All mock motors are always at home; transition directly to IDLE
-        self._state = MotorControllerState.IDLE
+        pass  # Mock is always at home
 
     def isAtBottomLimit(self, motor: int) -> bool:
         return True
@@ -38,41 +43,51 @@ class MockMotorController(MotorController):
         return True
 
     def jogMotor(self, motorNumber: int, direction: int):
-        self._state = MotorControllerState.JOGGING
+        return True
 
     def stopMotion(self):
-        self._state = MotorControllerState.STOPPING
+        pass
 
     def haltMotion(self):
-        self._state = MotorControllerState.STOPPING
+        pass
+
+    # =========================================================================
+    #                           MOTION STATUS
+    # =========================================================================
+
+    def areMotorsStopped(self) -> bool:
+        return True
+
+    def isHomingComplete(self) -> bool:
+        return True
 
     # =========================================================================
     #                              TELEMETRY
     # =========================================================================
 
     def getMotorSpeed(self, motor: int):
-        return random.random()*100, random.random()*100
+        return random.random() * 100, random.random() * 100
 
     def getMotorSpeeds(self) -> tuple[float, float]:
         return (0.0, 0.0)
 
     def getMotorPosition(self, motor: int) -> int:
-        pass
+        return 0
 
     def getMotorPositions(self) -> tuple[int, int]:
-        pass
+        return (0, 0)
 
     def getMotorCurrent(self, motor: int) -> float:
-        pass
+        return 0.0
 
     def getMotorCurrents(self) -> tuple[float, float]:
-        pass
+        return (0.0, 0.0)
 
     def getVoltage(self) -> float:
-        pass
+        return 0.0
 
     def getTemperature(self, sensor: int) -> float:
-        pass
+        return 0.0
 
     def getControllerStatus(self) -> str:
         return "Normal"

@@ -30,11 +30,8 @@ class ControllerTelemetry:
     lastUpdate: float = 0.0
 
 class MotorControllerState(Enum):
-    DISABLED = 0
-    IDLE     = 1
-    JOGGING  = 2
-    HOMING   = 3   # Driving toward bottom limit switch
-    STOPPING = 4
+    DISABLED = 0   # No hardware connection; all commands are no-ops
+    ACTIVE   = 1   # Connected and following commands
 
 class MotorController(ABC):
     """
@@ -285,6 +282,25 @@ class MotorController(ABC):
     def getState(self) -> MotorControllerState:
         """Gets the current state of the motor controller."""
         return self._state
+
+    @abstractmethod
+    def heartbeat(self) -> None:
+        """
+        Called by the RCC main thread every loop tick to authorise continued
+        command execution.  If not called within the implementation's TTL, the
+        serial thread stops sending commands so the hardware watchdog can fire.
+        """
+        ...
+
+    @abstractmethod
+    def areMotorsStopped(self) -> bool:
+        """True when both motors are below the stopped speed threshold."""
+        ...
+
+    @abstractmethod
+    def isHomingComplete(self) -> bool:
+        """True when all motors requested in the last homeMotors() call are at the bottom limit."""
+        ...
 
     @abstractmethod
     def isEstopActive(self) -> bool:

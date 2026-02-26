@@ -8,7 +8,7 @@ from enum import Enum
 
 from ride_control_computer.fault_monitor import Fault, FaultMonitor, FaultSeverity
 from ride_control_computer.loop_timer import LoopTimer
-from ride_control_computer.motor_controller.MotorController import MotorController, MotorControllerState
+from ride_control_computer.motor_controller.MotorController import MotorController
 from ride_control_computer.RideTimer import RideTimer, RideTimingData
 from ride_control_computer.ride_profile import RideProfile
 from ride_control_computer.ride_sequencer import RideSequencer
@@ -147,6 +147,7 @@ class RCC:
         time.sleep(0.05)
 
         while True:
+            self.__motorController.heartbeat()
             self.__processInputs()
             self.__updateState()
             self.__monitorSafety()
@@ -247,15 +248,15 @@ class RCC:
     def __checkStoppingProgress(self):
         """
         Called every loop tick while in STOPPING.
-        Transitions to IDLE once motors are confirmed stopped,
+        Transitions to IDLE once homing is confirmed complete,
         or triggers ESTOP if the 7-second timeout expires.
         """
         elapsed = time.monotonic() - self.__stateEntryTime
         if elapsed > self.STOPPING_TIMEOUT_S:
             logger.warning("Stopping timed out — latching E-Stop")
             self.__setState(RCCState.ESTOP)
-        elif self.__motorController.getState() == MotorControllerState.IDLE:
-            logger.info("Motors stopped — returning to IDLE")
+        elif self.__motorController.isHomingComplete():
+            logger.info("Homing complete — returning to IDLE")
             self.__setState(RCCState.IDLE)
 
     def __checkResettingComplete(self):
@@ -306,10 +307,10 @@ class RCC:
         self.__faultMonitor.register(Fault(
             code="MC_UNEXPECTED_MOTION",
             severity=FaultSeverity.MEDIUM,
-            description="Motor motion detected while controller is in IDLE state",
+            description="Motor motion detected while system is idle",
             condition=lambda: (
-                mc.getState() == MotorControllerState.IDLE
-                and any(abs(s) > 10 for s in (mc.getMotorSpeeds() or (0, 0)))
+                self.__state in (RCCState.IDLE, RCCState.OFF)
+                and any(abs(s) > 10 for s in mc.getMotorSpeeds())
             ),
         ))
 

@@ -4,6 +4,7 @@
 import time
 import logging
 import serial.serialutil
+from enum import Enum
 from threading import Thread, Event, Lock
 
 from gpiozero import Button
@@ -27,75 +28,91 @@ POSITION_TOLERANCE  = 50    # Encoder counts — "near enough" to target
 
 logger = logging.getLogger(__name__)
 
+
+class _CommandType(Enum):
+    """Active command the serial thread should re-send each write tick."""
+    STOP  = 0   # Decelerate both motors to 0
+    JOG   = 1   # Continuous speed on one motor
+    DRIVE = 2   # Position command on one or both motors
+    HOME  = 3   # Drive toward bottom limit at homing speed
+
+
 class RoboClawSerialMotorController(MotorController):
     """
     Implementation of MotorController using a RoboClaw motor controller over serial.
 
-    Runs a background serial thread that is the sole owner of all RoboClaw I/O.
-    Public API methods set state and parameters; the serial thread picks them up
-    on its next tick and sends the appropriate commands.
+    All RoboClaw I/O is owned exclusively by the background serial thread.
+    Public API methods store a pending command; the serial thread re-sends it
+    each write tick as long as the RCC heartbeat is fresh.
+
+    If the RCC stops calling heartbeat() (e.g. it hangs), the serial thread
+    stops sending within HEARTBEAT_TTL seconds and the RoboClaw's own packet
+    serial watchdog becomes the last line of defence.
     """
 
-    # --- Configuration ---
-    WRITE_RATE_HZ = 200      # command writes (jog, stop, etc.)
-    READ_RATE_HZ = 20        # telemetry reads (status, voltage, encoders, etc.)
-    JOG_SPEED = 500
-    JOG_ACCELERATION = 200
-    STOP_DECELERATION = 300
-    HALT_DECELERATION = 10000
-    STOPPED_THRESHOLD = 5    # QPPS — below this, motors are considered stopped
+    # --- Timing ---
+    WRITE_RATE_HZ      = 200    # command write frequency
+    READ_RATE_HZ       = 20     # telemetry read frequency
     RECONNECT_INTERVAL_S = 5.0  # seconds between reconnection attempts
+    HEARTBEAT_TTL      = 0.025  # seconds — must stay above RoboClaw's 20ms timeout
+
+    # --- Motion parameters ---
+    JOG_SPEED          = 500
+    JOG_ACCELERATION   = 200
+    STOP_DECELERATION  = 300
+    HALT_DECELERATION  = 10000
+    STOPPED_THRESHOLD  = 5      # QPPS — below this, motors are considered stopped
 
     def __init__(self, ports: list[str], address: int = 0x80):
         """
         Args:
-            ports: Serial port paths to try in order (e.g. ['/dev/ttyAMA1', '/dev/ttyACM0']).
-                   The MC will try each port on startup and on every reconnection attempt.
+            ports:   Serial port paths to try in order (e.g. ['/dev/ttyAMA1', '/dev/ttyACM0']).
+                     The MC will try each port on startup and retry every RECONNECT_INTERVAL_S.
             address: RoboClaw packet serial address (default 0x80).
         """
         super().__init__()
 
         self._ports = ports
         self._address = address
-        self._roboClaw: RoboClaw | None = None   # Managed internally; None when disconnected
+        self._roboClaw: RoboClaw | None = None
         self._lastConnectAttempt: float = 0.0
 
-        # State (written by main thread, read by serial thread)
-        self._state = MotorControllerState.DISABLED
+        # --- Heartbeat (written by RCC main thread, read by serial thread) ---
+        self._heartbeatExpiry: float = 0.0
 
-        # Jog parameters (set by main thread, read by serial thread)
-        self._jogMotor: int = 0
-        self._jogDirection: int = 0
+        # --- Pending command (main thread writes, serial thread reads) ---
+        self._commandLock = Lock()
+        self._commandType: _CommandType   = _CommandType.STOP
+        self._commandDecel: int           = self.STOP_DECELERATION
+        self._commandJogMotor: int        = 0
+        self._commandJogDir: int          = 0
+        # Per-motor drive params: motor → (position, speed, accel, decel)
+        self._commandDrive: dict[int, tuple[int, int, int, int]] = {}
+        # Motors requested for homing (persists until next homeMotors() call)
+        self._commandHomingMotors: list[int] = []
 
-        # Active deceleration (STOP vs HALT)
-        self._activeDeceleration: int = self.STOP_DECELERATION
-
-        # Telemetry cache
+        # --- Telemetry cache (serial thread writes, any thread reads) ---
         self._telemetry = ControllerTelemetry()
         self._telemetryLock = Lock()
 
-        # Limit switches (active-high, no internal pull-up)
+        # --- Limit switches (active-high, no internal pull-up) ---
         self._limitSwitches = {
-            1: {"top": Button(PIN_M1_TOP_LIMIT, pull_up=False), "bottom": Button(PIN_M1_BOTTOM_LIMIT, pull_up=False)},
-            2: {"top": Button(PIN_M2_TOP_LIMIT, pull_up=False), "bottom": Button(PIN_M2_BOTTOM_LIMIT, pull_up=False)},
+            1: {"top": Button(PIN_M1_TOP_LIMIT,    pull_up=False),
+                "bottom": Button(PIN_M1_BOTTOM_LIMIT, pull_up=False)},
+            2: {"top": Button(PIN_M2_TOP_LIMIT,    pull_up=False),
+                "bottom": Button(PIN_M2_BOTTOM_LIMIT, pull_up=False)},
         }
-        # Cached limit switch state (updated in _pollTelemetry, read from serial thread only)
+        # Limit switch cache (updated in _pollTelemetry, serial thread only)
         self._limitCache: dict[int, dict[str, bool]] = {
             1: {"top": False, "bottom": False},
             2: {"top": False, "bottom": False},
         }
-        # Last commanded position per motor (for isMotorNearTarget)
-        self._targetPositions: dict[int, int | None] = {1: None, 2: None}
-        # Last full drive command per motor (for watchdog telemetry)
-        self._lastDriveCommand: dict[int, tuple[int, int, int, int] | None] = {1: None, 2: None}
-        # Motors currently being homed
-        self._homingMotors: list[int] = []
 
-        # Background thread control
+        # --- Background thread control ---
         self._stopEvent = Event()
         self._controlThread: Thread | None = None
 
-        # Loop timer
+        # --- Loop timer ---
         self._loop_timer = LoopTimer()
 
     # =========================================================================
@@ -127,7 +144,7 @@ class RoboClawSerialMotorController(MotorController):
                 version = rc.read_version()
                 logger.info(f"RoboClaw connected on {port}: {version}")
                 self._roboClaw = rc
-                self._attemptReset()
+                self._attemptActivation()
                 return True
             except Exception as e:
                 logger.debug(f"RoboClaw not available on {port}: {e}")
@@ -150,23 +167,33 @@ class RoboClawSerialMotorController(MotorController):
         self._setState(MotorControllerState.DISABLED)
 
     # =========================================================================
+    #                           HEARTBEAT
+    # =========================================================================
+
+    def heartbeat(self) -> None:
+        """
+        Called by the RCC main thread every loop tick.
+        Authorises the serial thread to keep re-sending the active command
+        for the next HEARTBEAT_TTL seconds.  If heartbeat() is not called
+        within that window (e.g. RCC hangs), the serial thread stops sending
+        and the RoboClaw's own packet-serial watchdog takes over.
+        """
+        self._heartbeatExpiry = time.monotonic() + self.HEARTBEAT_TTL
+
+    # =========================================================================
     #                           COMMANDS
     # =========================================================================
 
     def driveToPosition(self, motor: int, position: int, speed: int, accel: int, decel: int) -> None:
-        if self._roboClaw is None:
-            return
-        self._targetPositions[motor] = position
-        self._lastDriveCommand[motor] = (position, speed, accel, decel)
-        self._roboClaw.drive_to_position_with_speed_acceleration_deceleration(
-            motor, position, speed, accel, decel
-        )
+        with self._commandLock:
+            self._commandType = _CommandType.DRIVE
+            self._commandDrive[motor] = (position, speed, accel, decel)
 
     def homeMotors(self, motors: list[int]) -> None:
-        self._homingMotors = [m for m in motors if not self._limitCache[m]["bottom"]]
-        if self._homingMotors:
-            self._setState(MotorControllerState.HOMING)
-        # Motors already at home are skipped; if all are already home, state stays IDLE
+        toHome = [m for m in motors if not self._limitCache[m]["bottom"]]
+        with self._commandLock:
+            self._commandType = _CommandType.HOME
+            self._commandHomingMotors = toHome
 
     def isAtBottomLimit(self, motor: int) -> bool:
         return self._limitCache[motor]["bottom"]
@@ -175,38 +202,54 @@ class RoboClawSerialMotorController(MotorController):
         return self._limitCache[motor]["top"]
 
     def isMotorNearTarget(self, motor: int, tolerance: int = POSITION_TOLERANCE) -> bool:
-        target = self._targetPositions[motor]
-        if target is None:
+        with self._commandLock:
+            cmd = self._commandDrive.get(motor)
+        if cmd is None:
             return False
-        return abs(self.getMotorPosition(motor) - target) <= tolerance
+        return abs(self.getMotorPosition(motor) - cmd[0]) <= tolerance
 
-    def jogMotor(self, motorNumber: int, direction: int):
+    def jogMotor(self, motorNumber: int, direction: int) -> bool:
         if motorNumber not in (1, 2):
             logger.error(f"Invalid motor number: {motorNumber}")
             return False
-
-        if self._state not in (MotorControllerState.IDLE, MotorControllerState.JOGGING):
-            logger.debug(f"Cannot jog from state {self._state}")
-            return False
-
-        self._jogMotor = motorNumber
-        self._jogDirection = direction
-        self._setState(MotorControllerState.JOGGING)
+        with self._commandLock:
+            self._commandType   = _CommandType.JOG
+            self._commandJogMotor = motorNumber
+            self._commandJogDir   = direction
         return True
 
-    def stopMotion(self):
-        self._activeDeceleration = self.STOP_DECELERATION
-        self._setState(MotorControllerState.STOPPING)
+    def stopMotion(self) -> None:
+        with self._commandLock:
+            self._commandType  = _CommandType.STOP
+            self._commandDecel = self.STOP_DECELERATION
 
-    def haltMotion(self):
-        self._activeDeceleration = self.HALT_DECELERATION
-        self._setState(MotorControllerState.STOPPING)
+    def haltMotion(self) -> None:
+        with self._commandLock:
+            self._commandType  = _CommandType.STOP
+            self._commandDecel = self.HALT_DECELERATION
+
+    # =========================================================================
+    #                           MOTION STATUS
+    # =========================================================================
+
+    def areMotorsStopped(self) -> bool:
+        """True when both motors are below the stopped speed threshold."""
+        s1, s2 = self.getMotorSpeeds()
+        return abs(s1) < self.STOPPED_THRESHOLD and abs(s2) < self.STOPPED_THRESHOLD
+
+    def isHomingComplete(self) -> bool:
+        """True when all motors requested in the last homeMotors() call are at the bottom limit."""
+        with self._commandLock:
+            homingMotors = list(self._commandHomingMotors)
+        if not homingMotors:
+            return False
+        return all(self._limitCache[m]["bottom"] for m in homingMotors)
 
     # =========================================================================
     #                           MOTOR TELEMETRY
     # =========================================================================
 
-    def getMotorSpeed(self, motor: int):
+    def getMotorSpeed(self, motor: int) -> float:
         with self._telemetryLock:
             return self._telemetry.motors[motor].speed
 
@@ -217,7 +260,7 @@ class RoboClawSerialMotorController(MotorController):
                 self._telemetry.motors[2].speed
             )
 
-    def getMotorPosition(self, motor: int):
+    def getMotorPosition(self, motor: int) -> int:
         with self._telemetryLock:
             return self._telemetry.motors[motor].encoder
 
@@ -228,7 +271,7 @@ class RoboClawSerialMotorController(MotorController):
                 self._telemetry.motors[2].encoder
             )
 
-    def getMotorCurrent(self, motor: int):
+    def getMotorCurrent(self, motor: int) -> float:
         with self._telemetryLock:
             return self._telemetry.motors[motor].current
 
@@ -247,15 +290,15 @@ class RoboClawSerialMotorController(MotorController):
     #                           CONTROLLER TELEMETRY
     # =========================================================================
 
-    def getVoltage(self):
+    def getVoltage(self) -> float:
         with self._telemetryLock:
             return self._telemetry.voltage
 
-    def getTemperature(self, sensor: int):
+    def getTemperature(self, sensor: int) -> float:
         with self._telemetryLock:
             return self._telemetry.temp1 if sensor == 1 else self._telemetry.temp2
 
-    def getControllerStatus(self):
+    def getControllerStatus(self) -> str:
         with self._telemetryLock:
             return self._telemetry.status
 
@@ -264,9 +307,10 @@ class RoboClawSerialMotorController(MotorController):
             return self._telemetry.rawStatus
 
     def getLastMotorCommand(self, motor: int) -> tuple[int, int, int, int] | None:
-        return self._lastDriveCommand[motor]
+        with self._commandLock:
+            return self._commandDrive.get(motor)
 
-    def isEstopActive(self):
+    def isEstopActive(self) -> bool:
         with self._telemetryLock:
             return "E-Stop" in self._telemetry.status
 
@@ -276,14 +320,14 @@ class RoboClawSerialMotorController(MotorController):
 
     STALE_THRESHOLD_MULTIPLIER = 3
 
-    def getTelemetryAge(self):
+    def getTelemetryAge(self) -> float:
         with self._telemetryLock:
             lastUpdate = self._telemetry.lastUpdate
         if lastUpdate == 0.0:
             return float('inf')
         return time.time() - lastUpdate
 
-    def isTelemetryStale(self, maxAgeSeconds: float | None = None):
+    def isTelemetryStale(self, maxAgeSeconds: float | None = None) -> bool:
         if maxAgeSeconds is None:
             maxAgeSeconds = self.STALE_THRESHOLD_MULTIPLIER / self.READ_RATE_HZ
         return self.getTelemetryAge() > maxAgeSeconds
@@ -295,16 +339,17 @@ class RoboClawSerialMotorController(MotorController):
     def getState(self) -> MotorControllerState:
         return self._state
 
-    def _setState(self, newState: MotorControllerState):
+    def _setState(self, newState: MotorControllerState) -> None:
         if self._state != newState:
-            logger.info(f"State: {self._state.name} -> {newState.name}")
+            logger.info(f"MC State: {self._state.name} -> {newState.name}")
             self._state = newState
 
-    def _attemptReset(self):
-        if self.getState() is not MotorControllerState.DISABLED:    return
-        if self.isTelemetryStale():                                  return
-        if self.getControllerStatus() != "Normal":                   return
-        self._setState(MotorControllerState.IDLE)
+    def _attemptActivation(self) -> None:
+        """Transition DISABLED → ACTIVE when telemetry is healthy and status is Normal."""
+        if self._state != MotorControllerState.DISABLED:  return
+        if self.isTelemetryStale():                        return
+        if self.getControllerStatus() != "Normal":         return
+        self._setState(MotorControllerState.ACTIVE)
 
     # =========================================================================
     #                           CONTROL LOOP
@@ -312,11 +357,11 @@ class RoboClawSerialMotorController(MotorController):
 
     def _controlLoop(self):
         writeInterval = 1.0 / self.WRITE_RATE_HZ
-        readInterval = 1.0 / self.READ_RATE_HZ
-        loopInterval = min(writeInterval, readInterval)
+        readInterval  = 1.0 / self.READ_RATE_HZ
+        loopInterval  = min(writeInterval, readInterval)
 
         lastWrite = 0.0
-        lastRead = 0.0
+        lastRead  = 0.0
 
         while not self._stopEvent.is_set():
             self._loop_timer.tick()
@@ -333,7 +378,7 @@ class RoboClawSerialMotorController(MotorController):
             try:
                 if now - lastWrite >= writeInterval:
                     lastWrite = now
-                    self._executeStateAction()
+                    self._executeCommand()
 
                 if now - lastRead >= readInterval:
                     lastRead = now
@@ -355,68 +400,86 @@ class RoboClawSerialMotorController(MotorController):
             if sleepTime > 0:
                 self._stopEvent.wait(sleepTime)
 
-    def _executeStateAction(self):
-        """Send the appropriate serial command for the current state."""
-        if self._state == MotorControllerState.JOGGING:
-            speed = self.JOG_SPEED if self._jogDirection > 0 else -self.JOG_SPEED
-            self._roboClaw.set_speed_with_acceleration(self._jogMotor, speed, self.JOG_ACCELERATION)
-        elif self._state == MotorControllerState.STOPPING:
+    def _executeCommand(self) -> None:
+        """
+        Re-send the active command to the RoboClaw — but only while the RCC
+        heartbeat is fresh.  If the heartbeat has expired the method returns
+        immediately so the RoboClaw's own packet-serial watchdog can fire.
+        """
+        if time.monotonic() > self._heartbeatExpiry:
+            return
+
+        with self._commandLock:
+            cmdType        = self._commandType
+            cmdDecel       = self._commandDecel
+            cmdJogMotor    = self._commandJogMotor
+            cmdJogDir      = self._commandJogDir
+            cmdDrive       = dict(self._commandDrive)
+            cmdHomingMotors = list(self._commandHomingMotors)
+
+        if cmdType == _CommandType.STOP:
             for motor in [1, 2]:
-                self._roboClaw.set_speed_with_acceleration(motor, 0, self._activeDeceleration)
-        elif self._state == MotorControllerState.HOMING:
-            for motor in self._homingMotors:
+                self._roboClaw.set_speed_with_acceleration(motor, 0, cmdDecel)
+
+        elif cmdType == _CommandType.JOG:
+            speed = self.JOG_SPEED if cmdJogDir > 0 else -self.JOG_SPEED
+            self._roboClaw.set_speed_with_acceleration(cmdJogMotor, speed, self.JOG_ACCELERATION)
+
+        elif cmdType == _CommandType.DRIVE:
+            for motor, (pos, spd, acc, dec) in cmdDrive.items():
+                self._roboClaw.drive_to_position_with_speed_acceleration_deceleration(
+                    motor, pos, spd, acc, dec
+                )
+
+        elif cmdType == _CommandType.HOME:
+            allAtHome = True
+            for motor in cmdHomingMotors:
                 if not self._limitCache[motor]["bottom"]:
                     self._roboClaw.set_speed_with_acceleration(motor, -HOMING_SPEED, HOMING_ACCELERATION)
+                    allAtHome = False
                 else:
                     self._roboClaw.set_speed_with_acceleration(motor, 0, HOMING_ACCELERATION)
+            # Auto-switch to STOP once every motor has reached its home limit
+            if allAtHome and cmdHomingMotors:
+                with self._commandLock:
+                    self._commandType  = _CommandType.STOP
+                    self._commandDecel = self.STOP_DECELERATION
 
-    def _checkStateTransitions(self):
-        """Check if the current state should transition."""
+    def _checkStateTransitions(self) -> None:
+        """Promote DISABLED → ACTIVE when hardware becomes healthy."""
         if self._state == MotorControllerState.DISABLED:
-            self._attemptReset()
-        elif self._state == MotorControllerState.STOPPING:
-            s1, s2 = self.getMotorSpeeds()
-            if abs(s1) < self.STOPPED_THRESHOLD and abs(s2) < self.STOPPED_THRESHOLD:
-                self._setState(MotorControllerState.IDLE)
-        elif self._state == MotorControllerState.HOMING:
-            if all(self._limitCache[m]["bottom"] for m in self._homingMotors):
-                self._setState(MotorControllerState.IDLE)
+            self._attemptActivation()
 
-    def _pollTelemetry(self):
+    def _pollTelemetry(self) -> None:
         pollingStartTime = time.time()
 
-        # Read from hardware
         status, rawStatus = self._roboClaw.read_status()
-        voltage = self._roboClaw.read_batt_voltage()
+        voltage  = self._roboClaw.read_batt_voltage()
         currents = self._roboClaw.read_currents()
-        temp1 = self._roboClaw.read_temp_sensor(1)
-        temp2 = self._roboClaw.read_temp_sensor(2)
+        temp1    = self._roboClaw.read_temp_sensor(1)
+        temp2    = self._roboClaw.read_temp_sensor(2)
 
         motorData: dict[int, MotorTelemetry] = {}
-
         for motor in [1, 2]:
-            encData = self._roboClaw.read_encoder_pos(motor)
+            encData   = self._roboClaw.read_encoder_pos(motor)
             speedData = self._roboClaw.read_encoder_speed(motor)
-
             motorData[motor] = MotorTelemetry(
-                speed=speedData["speed"],
-                encoder=encData["encoder"],
-                current=currents[motor - 1],
-                direction=speedData["direction"],
-                timestamp=pollingStartTime
+                speed     = speedData["speed"],
+                encoder   = encData["encoder"],
+                current   = currents[motor - 1],
+                direction = speedData["direction"],
+                timestamp = pollingStartTime,
             )
 
-        # Read limit switches
         for motor in [1, 2]:
             self._limitCache[motor]["top"]    = self._limitSwitches[motor]["top"].is_pressed
             self._limitCache[motor]["bottom"] = self._limitSwitches[motor]["bottom"].is_pressed
 
-        # Update cache atomically
         with self._telemetryLock:
-            self._telemetry.motors = motorData
-            self._telemetry.voltage = voltage
-            self._telemetry.status = status
+            self._telemetry.motors    = motorData
+            self._telemetry.voltage   = voltage
+            self._telemetry.status    = status
             self._telemetry.rawStatus = rawStatus
-            self._telemetry.temp1 = temp1
-            self._telemetry.temp2 = temp2
+            self._telemetry.temp1     = temp1
+            self._telemetry.temp2     = temp2
             self._telemetry.lastUpdate = pollingStartTime

@@ -66,7 +66,7 @@ class TestRoboClawSerialMotorController():
             controller = RoboClawSerialMotorController(['mock_port'])
             controller.start()
             time.sleep(0.05)
-            assert controller.getState() is MotorControllerState.IDLE
+            assert controller.getState() is MotorControllerState.ACTIVE
 
     def testStartupEStop(self):
         with patch(
@@ -80,9 +80,9 @@ class TestRoboClawSerialMotorController():
             time.sleep(0.05)
             assert controller.getState() is MotorControllerState.DISABLED
             time.sleep(1)
-            assert controller.getState() is MotorControllerState.DISABLED\
+            assert controller.getState() is MotorControllerState.DISABLED
 
-    def testRideSequenceLifecycle(self):
+    def testAreMotorsStopped(self):
         with patch(
                 "ride_control_computer.motor_controller.RoboClawSerialMC.RoboClaw"
         ) as mockCls:
@@ -90,20 +90,15 @@ class TestRoboClawSerialMotorController():
             controller = RoboClawSerialMotorController(['mock_port'])
             controller.start()
             time.sleep(0.05)
-            # Ride lifecycle is managed by RideSequencer at the RCC level; MC stays IDLE
-            assert controller.getState() is MotorControllerState.IDLE
 
-            controller.stopMotion()
-            assert controller.getState() is MotorControllerState.STOPPING
+            # Default speed = 100 — not stopped
+            assert not controller.areMotorsStopped()
 
-            # Mock motor stopping, make sure MC -> idle.
-            roboClaw.read_encoder_speed.side_effect = lambda m: {
-                "speed": 100, "direction": "Forward",
-            }
-            time.sleep(0.5)
-            assert controller.getState() is MotorControllerState.STOPPING
+            # Simulate motors slowing below threshold
             roboClaw.read_encoder_speed.side_effect = lambda m: {
                 "speed": 0.5, "direction": "Forward",
             }
-            time.sleep(0.5)
-            assert controller.getState() is MotorControllerState.IDLE
+            time.sleep(0.2)  # let telemetry update
+            assert controller.areMotorsStopped()
+
+            controller.shutdown()
