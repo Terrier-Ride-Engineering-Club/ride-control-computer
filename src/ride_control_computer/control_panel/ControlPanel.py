@@ -85,6 +85,14 @@ class ControlPanel(ABC):
         self.__maintenanceJogSwitchCallbacks.append(callback)
     
     
+    def updateIndicators(self, state, hasActiveFaults: bool) -> None:
+        """
+        Update indicator LEDs based on the current RCC state and fault status.
+        Hardware implementations should override this.  The default is a no-op
+        so software-only panels (e.g. web UI) need not implement it.
+        """
+        pass
+
     @property
     def loopTimer(self) -> LoopTimer:
         return self._loop_timer

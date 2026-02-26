@@ -1,9 +1,11 @@
 import logging
+from enum import Enum, auto
 from time import sleep
 from typing import Callable
 
-from gpiozero import Button
+from gpiozero import Button, LED
 
+from ride_control_computer.RCC import RCCState
 from ride_control_computer.control_panel.ControlPanel import (
     ControlPanel,
     MomentaryButtonState,
@@ -23,7 +25,64 @@ PIN_MAINT_MAINTENANCE = 17  # Maintenance switch "MAINTENANCE" position
 PIN_JOG_UP = 27              # Jog switch "UP" position
 PIN_JOG_DOWN = 22            # Jog switch "DOWN" position
 
-DEBOUNCE_TIME = 0.05  # 50ms debounce
+# BCM GPIO pin numbers for button indicator LEDs (active-high, 120VAC control board)
+PIN_DISPATCH_LED = 6
+PIN_RESET_LED    = 19
+PIN_STOP_LED     = 26
+
+DEBOUNCE_TIME       = 0.05  # 50ms debounce
+BLINK_PERIOD_S      = 0.5   # on_time and off_time for standard blinking LEDs
+BLINK_FAST_PERIOD_S = 0.1   # on_time and off_time for fast blinking LEDs
+
+
+class _LEDMode(Enum):
+    OFF        = auto()
+    ON         = auto()
+    BLINK      = auto()
+    BLINK_FAST = auto()
+
+
+class _ButtonLED:
+    """
+    Manages one indicator LED paired with its button.
+
+    Base mode (OFF / ON / BLINK) is set by updateIndicators() each RCC tick.
+    While the physical button is held down the LED is unconditionally solid ON;
+    on release it returns to whatever the current base mode is.
+
+    setMode() is guarded — it only re-applies gpiozero if the mode actually
+    changed, so calling it at 1 kHz will not restart the blink cycle each tick.
+    """
+
+    def __init__(self, button: Button, ledPin: int):
+        self._led    = LED(ledPin)
+        self._button = button
+        self._mode   = _LEDMode.OFF
+        button.when_pressed  = self._onPress
+        button.when_released = self._onRelease
+
+    def setMode(self, mode: _LEDMode) -> None:
+        if mode == self._mode:
+            return
+        self._mode = mode
+        if not self._button.is_pressed:
+            self._applyMode()
+
+    def _onPress(self) -> None:
+        self._led.on()
+
+    def _onRelease(self) -> None:
+        self._applyMode()
+
+    def _applyMode(self) -> None:
+        if self._mode == _LEDMode.OFF:
+            self._led.off()
+        elif self._mode == _LEDMode.ON:
+            self._led.on()
+        elif self._mode == _LEDMode.BLINK:
+            self._led.blink(on_time=BLINK_PERIOD_S, off_time=BLINK_PERIOD_S)
+        elif self._mode == _LEDMode.BLINK_FAST:
+            self._led.blink(on_time=BLINK_FAST_PERIOD_S, off_time=BLINK_FAST_PERIOD_S)
 
 
 class MomentaryInput:
@@ -93,10 +152,41 @@ class HardwareControlPanel(ControlPanel):
             self._enqueueMaintenanceJogSwitch,
         )
 
+        # Indicator LEDs — paired to their respective buttons for press-override
+        self._dispatchLED = _ButtonLED(self._buttons[0].btn, PIN_DISPATCH_LED)
+        self._resetLED    = _ButtonLED(self._buttons[1].btn, PIN_RESET_LED)
+        self._stopLED     = _ButtonLED(self._buttons[2].btn, PIN_STOP_LED)
+
         logger.info("HardwareControlPanel initialized (pins: dispatch=%d, reset=%d, stop=%d, estop=%d, "
                      "maint_on=%d, maint_maint=%d, jog_up=%d, jog_down=%d)",
                      PIN_DISPATCH, PIN_RESET, PIN_STOP, PIN_ESTOP,
                      PIN_MAINT_ON, PIN_MAINT_MAINTENANCE, PIN_JOG_UP, PIN_JOG_DOWN)
+
+    def updateIndicators(self, state, hasActiveFaults: bool) -> None:
+        """
+        Update the three button indicator LEDs based on RCC state.
+
+        Dispatch — blinks at 500ms when IDLE (ready to dispatch); off otherwise.
+        Reset    — blinks at 500ms when in E-Stop with no active software faults
+                   (hardware E-Stop cleared; safe to reset); off otherwise.
+        Stop     — no autonomous blink behavior; press-override still lights it
+                   solid while held.
+        """
+        # Dispatch: blink when ready for the operator to dispatch
+        self._dispatchLED.setMode(
+            _LEDMode.BLINK if state == RCCState.IDLE else _LEDMode.OFF
+        )
+
+        # Reset: blink to invite reset when E-Stop can actually be cleared
+        self._resetLED.setMode(
+            _LEDMode.BLINK if (state == RCCState.ESTOP and not hasActiveFaults)
+            else _LEDMode.OFF
+        )
+
+        # Stop: fast blink while the ride is actively stopping
+        self._stopLED.setMode(
+            _LEDMode.BLINK_FAST if state == RCCState.STOPPING else _LEDMode.OFF
+        )
 
     def run(self) -> None:
         # Read initial switch states so we don't fire spurious callbacks on startup

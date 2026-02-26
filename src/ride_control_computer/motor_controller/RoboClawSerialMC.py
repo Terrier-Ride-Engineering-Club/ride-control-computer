@@ -102,11 +102,20 @@ class RoboClawSerialMotorController(MotorController):
             2: {"top": Button(PIN_M2_TOP_LIMIT,    pull_up=False),
                 "bottom": Button(PIN_M2_BOTTOM_LIMIT, pull_up=False)},
         }
-        # Limit switch cache (updated in _pollTelemetry, serial thread only)
+        # Limit switch cache — seeded from GPIO at startup and kept current via
+        # gpiozero when_pressed/when_released callbacks (no serial-thread polling).
         self._limitCache: dict[int, dict[str, bool]] = {
             1: {"top": False, "bottom": False},
             2: {"top": False, "bottom": False},
         }
+        def _makeLimitCallback(motor: int, pos: str, value: bool):
+            def cb(): self._limitCache[motor][pos] = value
+            return cb
+        for motor, switches in self._limitSwitches.items():
+            for pos, btn in switches.items():
+                self._limitCache[motor][pos] = btn.is_pressed
+                btn.when_pressed  = _makeLimitCallback(motor, pos, True)
+                btn.when_released = _makeLimitCallback(motor, pos, False)
 
         # --- Background thread control ---
         self._stopEvent = Event()
@@ -470,10 +479,6 @@ class RoboClawSerialMotorController(MotorController):
                 direction = speedData["direction"],
                 timestamp = pollingStartTime,
             )
-
-        for motor in [1, 2]:
-            self._limitCache[motor]["top"]    = self._limitSwitches[motor]["top"].is_pressed
-            self._limitCache[motor]["bottom"] = self._limitSwitches[motor]["bottom"].is_pressed
 
         with self._telemetryLock:
             self._telemetry.motors    = motorData

@@ -151,6 +151,7 @@ class RCC:
             self.__processInputs()
             self.__updateState()
             self.__monitorSafety()
+            self.__controlPanel.updateIndicators(self.__state, self.__faultMonitor.hasActiveFaults())
             self.__printTelemetry()
 
             self.__loopTimer.tick()
