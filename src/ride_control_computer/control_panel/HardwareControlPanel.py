@@ -196,7 +196,7 @@ class HardwareControlPanel(ControlPanel):
         logger.info("HardwareControlPanel running (initial maint=%s, jog=%s)",
                      self._maintSwitch.prevState.name, self._jogSwitch.prevState.name)
 
-        while True:
+        while not self._stopEvent.is_set():
             self._loop_timer.tick()
 
             for button in self._buttons:

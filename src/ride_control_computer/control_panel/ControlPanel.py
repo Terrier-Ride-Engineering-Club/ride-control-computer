@@ -4,6 +4,7 @@ from enum import Enum
 from functools import partial
 from queue import Queue, Empty
 from threading import Thread
+import threading
 
 from ride_control_computer.loop_timer import LoopTimer
 
@@ -40,8 +41,10 @@ class ControlPanel(ABC):
 
     def __init__(self):
         self._loop_timer = LoopTimer()
+        self._stopEvent = threading.Event()
+        self._thread: Thread | None = None
         self.__callbackQueue: Queue = Queue()
-        
+
         self.__dispatchCallbacks: List[Callable[[], None]] = []
         self.__resetCallbacks: List[Callable[[], None]] = []
         self.__stopCallbacks: List[Callable[[], None]] = []
@@ -55,11 +58,20 @@ class ControlPanel(ABC):
         ...
 
     def start(self) -> None:
-        """Non-blocking call which calls run() in a seperate daemon thread."""
-        Thread(
+        """Non-blocking call which calls run() in a separate daemon thread."""
+        self._stopEvent.clear()
+        self._thread = Thread(
             target=self.run,
-            daemon=True
-            ).start()
+            daemon=True,
+            name="ControlPanelListener",
+        )
+        self._thread.start()
+
+    def shutdown(self) -> None:
+        """Signal run() to exit and wait for the listener thread to finish."""
+        self._stopEvent.set()
+        if self._thread is not None:
+            self._thread.join(timeout=1.0)
 
     def triggerCallbacks(self) -> None:
         """When called by the main thread, this will execute all callbacks in the callback queue."""

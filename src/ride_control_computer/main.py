@@ -3,6 +3,7 @@
 
 import argparse
 import logging
+import signal
 from datetime import datetime
 from pathlib import Path
 
@@ -86,6 +87,13 @@ def main():
     )
 
     rideControlComputer = RCC(mc, cp, tc, wc, watchdogPort=WATCHDOG_PORT)
+
+    def _shutdown(sig, frame):
+        rideControlComputer.shutdown()
+
+    signal.signal(signal.SIGTERM, _shutdown)
+    signal.signal(signal.SIGINT, _shutdown)
+
     rideControlComputer.run()
 
 if __name__ == '__main__':

@@ -6,7 +6,8 @@ import threading
 import time
 from enum import Enum
 
-from ride_control_computer.fault_monitor import Fault, FaultMonitor, FaultSeverity
+from ride_control_computer.fault_monitor import FaultMonitor, FaultSeverity
+from ride_control_computer.motor_controller.mc_faults import registerMotorControllerFaults
 from ride_control_computer.loop_timer import LoopTimer
 from ride_control_computer.motor_controller.MotorController import MotorController
 from ride_control_computer.RideTimer import RideTimer, RideTimingData
@@ -100,6 +101,8 @@ class RCC:
         else:
             self.__watchdog = None
 
+        self._stopEvent = threading.Event()
+
         self.__state = RCCState.IDLE
         self.__preEstopState = RCCState.IDLE
 
@@ -124,11 +127,7 @@ class RCC:
     def run(self):
         """Blocking call to start the Ride Control Computer."""
 
-        threading.Thread(
-            target=self.__controlPanel.run,
-            daemon=True,
-            name="ControlPanelListener"
-            ).start()
+        self.__controlPanel.start()
 
         threading.Thread(
             target=self.__webserverController.start,
@@ -146,7 +145,7 @@ class RCC:
 
         time.sleep(0.05)
 
-        while True:
+        while not self._stopEvent.is_set():
             self.__motorController.heartbeat()
             self.__processInputs()
             self.__updateState()
@@ -156,6 +155,16 @@ class RCC:
 
             self.__loopTimer.tick()
             time.sleep(0.001)
+
+    def shutdown(self) -> None:
+        """Stop the main loop and cleanly shut down all subsystems."""
+        logger.info("RCC shutting down")
+        self._stopEvent.set()
+        self.__controlPanel.shutdown()
+        self.__themingController.stopShow()
+        self.__motorController.shutdown()
+        if self.__watchdog is not None:
+            self.__watchdog.shutdown()
 
     # =========================================================================
     #                           STATE MANAGEMENT
@@ -285,35 +294,11 @@ class RCC:
 
     def __registerFaults(self) -> None:
         """Register all monitored fault conditions with the fault monitor."""
-        mc = self.__motorController
-
-        self.__faultMonitor.register(Fault(
-            code="MC_COMM_FAILURE",
-            severity=FaultSeverity.HIGH,
-            description="Motor controller telemetry is stale — communication lost",
-            condition=mc.isTelemetryStale,
-        ))
-        self.__faultMonitor.register(Fault(
-            code="MC_ESTOP_ACTIVE",
-            severity=FaultSeverity.HIGH,
-            description="Hardware E-Stop is active on motor controller",
-            condition=mc.isEstopActive,
-        ))
-        self.__faultMonitor.register(Fault(
-            code="MC_STATUS_ABNORMAL",
-            severity=FaultSeverity.HIGH,
-            description=lambda: f"Motor controller reported abnormal status: {mc.getControllerStatus()}",
-            condition=lambda: mc.getControllerStatus() not in ("Normal", "E-Stop"),
-        ))
-        self.__faultMonitor.register(Fault(
-            code="MC_UNEXPECTED_MOTION",
-            severity=FaultSeverity.MEDIUM,
-            description="Motor motion detected while system is idle",
-            condition=lambda: (
-                self.__state in (RCCState.IDLE, RCCState.OFF)
-                and any(abs(s) > 10 for s in mc.getMotorSpeeds())
-            ),
-        ))
+        registerMotorControllerFaults(
+            self.__faultMonitor,
+            self.__motorController,
+            isMotionForbidden=lambda: self.__state in (RCCState.IDLE, RCCState.OFF),
+        )
 
     # =========================================================================
     #                           PUBLIC ACCESSORS
