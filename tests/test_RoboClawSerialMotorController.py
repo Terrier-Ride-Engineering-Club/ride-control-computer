@@ -1,6 +1,8 @@
 import time
 import threading
+import pytest
 from unittest.mock import patch, MagicMock
+pytest.importorskip("gpiozero")
 from ride_control_computer.motor_controller.MotorController import MotorControllerState
 from ride_control_computer.motor_controller.RoboClawSerialMC import RoboClawSerialMotorController
 

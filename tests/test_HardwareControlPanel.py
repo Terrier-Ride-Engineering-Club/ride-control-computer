@@ -1,4 +1,5 @@
 import pytest
+pytest.importorskip("gpiozero")
 from gpiozero import Device
 from gpiozero.pins.mock import MockFactory
 
