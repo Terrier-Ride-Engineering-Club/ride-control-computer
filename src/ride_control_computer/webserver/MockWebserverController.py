@@ -8,10 +8,6 @@ class MockWebserverController(WebserverController):
         super().__init__(getSpeeds,getState, startTheming, stopTheming, themeStatus)
 
     def start(self):
-        #Motor information:
-        self.getSpeed()
-        self.getState()
-
         @self.app.route('/')
         def index():
             return one()
@@ -79,7 +75,7 @@ class MockWebserverController(WebserverController):
 
         @self.app.route('/three')
         def three():
-            status = self.themeStatus
+            status = self.themeStatus()
             html = """
             <body style=\"text-align:center;\">
                 <h1> Theming controls </h1>

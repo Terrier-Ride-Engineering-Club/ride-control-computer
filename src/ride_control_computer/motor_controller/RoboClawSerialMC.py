@@ -334,7 +334,7 @@ class RoboClawSerialMotorController(MotorController):
             lastUpdate = self._telemetry.lastUpdate
         if lastUpdate == 0.0:
             return float('inf')
-        return time.time() - lastUpdate
+        return time.monotonic() - lastUpdate
 
     def isTelemetryStale(self, maxAgeSeconds: float | None = None) -> bool:
         if maxAgeSeconds is None:
@@ -460,7 +460,7 @@ class RoboClawSerialMotorController(MotorController):
             self._attemptActivation()
 
     def _pollTelemetry(self) -> None:
-        pollingStartTime = time.time()
+        pollingStartTime = time.monotonic()
 
         status, rawStatus = self._roboClaw.read_status()
         voltage  = self._roboClaw.read_batt_voltage()

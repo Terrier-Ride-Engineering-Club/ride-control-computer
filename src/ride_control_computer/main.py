@@ -82,7 +82,7 @@ def main():
         getState=mc.getState,
         startTheming=tc.startShow,
         stopTheming=tc.stopShow,
-        themeStatus=tc.status
+        themeStatus=lambda: tc.status
     )
 
     rideControlComputer = RCC(mc, cp, tc, wc, watchdogPort=WATCHDOG_PORT)

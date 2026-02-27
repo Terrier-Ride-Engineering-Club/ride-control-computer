@@ -57,7 +57,7 @@ class ControlPanel(ABC):
     def start(self) -> None:
         """Non-blocking call which calls run() in a seperate daemon thread."""
         Thread(
-            target=self.run(),
+            target=self.run,
             daemon=True
             ).start()
 
