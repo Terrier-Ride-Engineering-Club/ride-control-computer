@@ -6,7 +6,7 @@ import threading
 import time
 from enum import Enum
 
-from ride_control_computer.fault_monitor import FaultMonitor, FaultSeverity
+from ride_control_computer.fault_monitor import Fault, FaultMonitor, FaultSeverity
 from ride_control_computer.motor_controller.mc_faults import registerMotorControllerFaults
 from ride_control_computer.loop_timer import LoopTimer
 from ride_control_computer.motor_controller.MotorController import MotorController

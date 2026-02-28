@@ -10,3 +10,4 @@ ride-control-computer.code-workspace
 /.idea
 logs/*
 !logs/.gitkeep
+/.idea
