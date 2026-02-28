@@ -1,27 +1,26 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Theming Controller</title>
+{% extends "base.html" %}
 
-</head>
-<body style="text-align:center;">
-<h1> Theming controls </h1>
-                <h2> Status: {{ status }} </h2>
-                <div style= "display: flex; justify-content: center; gap: 12px; margin-top: 20px;">
-                    <form action="/start-theming" method="post">
-                        <button style="padding: 12px 24px; font-size:18px;">Start</button>
-                    </form>
-                    <form action="/stop-theming" method="post">
-                        <button style="padding: 12px 24px; font-size:18px;">Stop</button>
-                    </form>
-                </div>
-            </body>
-            <div style="text-align:center; margin-top:20px;">
-                <a href="/one"><button style="padding: 12px 24px; font-size:18px;">One</button></a>
-                <a href="/two"><button style="padding: 12px 24px; font-size:18px;">Two</button></a>
-                <a href="/three"><button style="padding: 12px 24px; font-size:18px;"><b>Three</b></button></a>
-                <a href="/four"><button style="padding: 12px 24px; font-size:18px;">Four</button></a>
-            </div>
-</body>
-</html>
+{% block content %}
+<div class="card shadow text-center">
+    <div class="card-body">
+
+        <h3>Theming Control</h3>
+
+        <p class="mt-3">
+            Current Status:
+            <span class="badge bg-primary">{{ status }}</span>
+        </p>
+
+        <div class="mt-4">
+            <form action="/start-theming" method="post" class="d-inline">
+                <button class="btn btn-success">Start Theming</button>
+            </form>
+
+            <form action="/stop-theming" method="post" class="d-inline">
+                <button class="btn btn-danger">Stop Theming</button>
+            </form>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

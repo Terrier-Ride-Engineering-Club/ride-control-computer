@@ -23,9 +23,13 @@ class TelemetrySample:
     motor2Position: int
     motor1Velocity: float
     motor2Velocity: float
+    motor1Current: float
+    motor2Current: float
+    voltage: float
+    motor1temp: float
+    motor2temp: float
 
-
-# ============================================================
+    # ============================================================
 # Ride Telemetry Container
 # ============================================================
 
@@ -43,6 +47,9 @@ class RideTelemetryData:
         rideElapsed: float,
         positions: Tuple[int, int],
         velocities: Tuple[float, float],
+        currents: Tuple[float, float],
+        voltage: float,
+        temperatures: Tuple[float, float]
     ) -> None:
         """
         Add a telemetry snapshot.
@@ -53,6 +60,12 @@ class RideTelemetryData:
             motor2Position=positions[1],
             motor1Velocity=velocities[0],
             motor2Velocity=velocities[1],
+            motor1Current=currents[0],
+            motor2Current=currents[1],
+            voltage=voltage,
+            motor1temp=temperatures[0],
+            motor2temp=temperatures[1],
+
         )
         self.samples.append(sample)
 
@@ -86,6 +99,9 @@ class RideTelemetryLogger:
         rideElapsed: float,
         positions: Tuple[int, int],
         velocities: Tuple[float, float],
+        currents: Tuple[float, float],
+        voltage: float,
+        temperatures: Tuple[float, float],
     ) -> None:
         """
         Log a telemetry snapshot for the active ride.
@@ -93,7 +109,7 @@ class RideTelemetryLogger:
         if self._currentRide is None:
             return
 
-        self._currentRide.addSample(rideElapsed, positions, velocities)
+        self._currentRide.addSample(rideElapsed, positions, velocities, currents, voltage, temperatures)
 
     # --------------------------------------------------------
 

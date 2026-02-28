@@ -1,71 +1,199 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>TREC HMI</title>
-</head>
-                <style>
-                    .bars-container {
-                        display: flex;
-                        justify-content: center;
-                        gap: 50px;
-                        margin-top: 30px;
-                    }
+{% extends "base.html" %}
+{% block content %}
 
-                    .bar-wrapper {
-                        position: relative;
-                        width: 50px;
-                        height: 200px;
-                        border: 2px solid #333;
-                        background: #f5f5f5;
-                    }
+<div class="container-fluid">
+    <div class="row">
 
-                    .marker-line {
-                        position: absolute;
-                        left: 0;
-                        width: 100%;
-                        height: 3px;
-                        background: red;
-                        transform: translateY(50%);
-                    }
+        <!-- ================= LEFT MAIN SECTION ================= -->
+        <div class="col-md-8">
 
-                    .bar-label {
-                        text-align: center;
-                        margin-top: 10px;
-                        font-size: 16px;
-                    }
-                </style>
-            </head>
-            <body>
+            <!-- ===== STATE + TIME ===== -->
+            <div class="card shadow mb-4">
+                <div class="card-body text-center">
 
-                <div style="text-align:center">
-                    <h1>speed = {{ speed }}</h1>
-                    <h1>state = {{ state }}</h1>
-                    <h1>positions = {{ positions }}</h1>
-                    <h1>current run time = {{ rideTime }} </h1>
+                    <h3 class="card-title">Live Ride Status</h3>
 
-                    <div class="bars-container">
-                        <div>
-                            <div class="bar-wrapper">
-                                <div class="marker-line" style="bottom: {{ line1 }}%;"></div>
-                            </div>
-                            <div class="bar-label">Car 1</div>
+                    <div class="mt-4">
+                        <div id="state" class="fs-2 fw-bold">
+                            {{ state }}
                         </div>
-
-                        <div>
-                            <div class="bar-wrapper">
-                                <div class="marker-line" style="bottom: {{ line2 }}%;"></div>
-                            </div>
-                            <div class="bar-label">Car 2</div>
+                        <div id="rideTime" class="fs-4 text-muted">
+                            {{ rideTime }}
                         </div>
                     </div>
 
-                    <div style="text-align:center; margin-top:30px;">
-                        <a href="/one"><button style="padding: 12px 24px; font-size:18px;"><b>One</b></button></a>
-                        <a href="/two"><button style="padding: 12px 24px; font-size:18px;">Two</button></a>
-                        <a href="/three"><button style="padding: 12px 24px; font-size:18px;">Three</button></a>
-                        <a href="/four"><button style="padding: 12px 24px; font-size:18px;">Four</button></a>
-                    </div>
                 </div>
-</body>
-</html>
+            </div>
+
+            <!-- ===== POSITION BARS ===== -->
+            <div class="card shadow mb-4">
+                <div class="card-body">
+
+                    <div class="d-flex justify-content-center align-items-end gap-5"
+                         style="height: 250px;">
+
+                        <!-- Motor 1 -->
+                        <div class="text-center">
+                            <div class="progress"
+                                 style="width: 60px; height: 200px; transform: rotate(180deg);">
+                                <div id="bar1"
+                                     class="progress-bar bg-info"
+                                     style="width: 100%; height: {{ line1 }}%;">
+                                </div>
+                            </div>
+                            <div class="mt-2 fw-bold">Motor 1</div>
+                        </div>
+
+                        <!-- Motor 2 -->
+                        <div class="text-center">
+                            <div class="progress"
+                                 style="width: 60px; height: 200px; transform: rotate(180deg);">
+                                <div id="bar2"
+                                     class="progress-bar bg-warning"
+                                     style="width: 100%; height: {{ line2 }}%;">
+                                </div>
+                            </div>
+                            <div class="mt-2 fw-bold">Motor 2</div>
+                        </div>
+
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- ===== MOTOR DATA (Speed / Position / Temp) ===== -->
+            <div class="card shadow">
+                <div class="card-body text-center">
+
+                    <div class="row">
+
+                        <!-- Motor 1 -->
+                        <div class="col">
+                            <div class="fw-bold mb-2">Motor 1</div>
+
+                            <div id="m1_speed" class="fs-5 fw-bold">
+                                {{ "%.2f"|format(speed[0]) }}
+                            </div>
+
+                            <div id="m1_pos">
+                                {{ positions[0] }} mm
+                            </div>
+
+                            <div id="m1_temp">
+                                {{ temps[0] }} °C
+                            </div>
+                        </div>
+
+                        <!-- Motor 2 -->
+                        <div class="col">
+                            <div class="fw-bold mb-2">Motor 2</div>
+
+                            <div id="m2_speed" class="fs-5 fw-bold">
+                                {{ "%.2f"|format(speed[1]) }}
+                            </div>
+
+                            <div id="m2_pos">
+                                {{ positions[1] }} mm
+                            </div>
+
+                            <div id="m2_temp">
+                                {{ temps[1] }} °C
+                            </div>
+                        </div>
+
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+
+        <!-- ================= RIGHT SIDE PANEL ================= -->
+        <div class="col-md-4">
+
+            <!-- ===== RUN COMPARISON ===== -->
+            <div class="card shadow mb-4">
+                <div class="card-body">
+
+                    <h5>Run Comparison</h5>
+
+                    <p>
+                        <strong>Current Time:</strong>
+                        <span id="currentTime">{{ four.elapsed }}</span>
+                    </p>
+
+                    <p>
+                        <strong>Motor 1 Speed Δ:</strong>
+                        <span id="diff_m1_vel">{{ four.diff_m1_vel }}</span>
+                    </p>
+
+                    <p>
+                        <strong>Motor 2 Speed Δ:</strong>
+                        <span id="diff_m2_vel">{{ four.diff_m2_vel }}</span>
+                    </p>
+
+                </div>
+            </div>
+
+            <!-- ===== CONSOLE OUTPUT ===== -->
+            <div class="card shadow">
+                <div class="card-body">
+
+                    <h5>Console Output</h5>
+
+                    <div id="console"
+                         style="height: 300px;
+                                overflow-y: auto;
+                                background: #111;
+                                color: #0f0;
+                                padding: 10px;
+                                font-family: monospace;">
+                        {{ console }}
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+</div>
+
+<!-- ================= AUTO REFRESH SCRIPT ================= -->
+<script>
+setInterval(async () => {
+    const response = await fetch("/one-data");
+    const data = await response.json();
+
+    // State + Time
+    document.getElementById("state").innerText = data.state;
+    document.getElementById("rideTime").innerText = data.rideTime;
+
+    // Speeds
+    document.getElementById("m1_speed").innerText =
+        data.m1_speed.toFixed(2);
+    document.getElementById("m2_speed").innerText =
+        data.m2_speed.toFixed(2);
+
+    // Positions
+    document.getElementById("m1_pos").innerText =
+        data.m1_pos + " mm";
+    document.getElementById("m2_pos").innerText =
+        data.m2_pos + " mm";
+
+    // Temps
+    document.getElementById("m1_temp").innerText =
+        data.m1_temp + " °C";
+    document.getElementById("m2_temp").innerText =
+        data.m2_temp + " °C";
+
+    // Update bars
+    document.getElementById("bar1").style.height =
+        data.line1 + "%";
+    document.getElementById("bar2").style.height =
+        data.line2 + "%";
+
+}, 1000);
+</script>
+
+{% endblock %}

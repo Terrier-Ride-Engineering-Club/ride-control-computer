@@ -1,51 +1,32 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Data Viewer</title>
-    <style>
-        table {
-            border-collapse: collapse;
-            width: 60%;
-            margin: 20px auto;
-        }
-        th, td {
-            border: 1px solid #444;
-            padding: 8px;
-            text-align: center;
-        }
-        th {
-            background-color: #eee;
-        }
-    </style>
-</head>
-<body>
+{% extends "base.html" %}
 
-<h2 style="text-align:center;">Time, Speed, and Position Data</h2>
+{% block content %}
+<div class="card shadow">
+    <div class="card-body">
 
-<table>
-    <tr>
-        <th>Data</th>
-        <th>Time</th>
-        <th>Speed</th>
-        <th>Position</th>
-    </tr>
+        <h3 class="card-title">Motor Data</h3>
 
-    {% for row in data %}
-    <tr>
-        <td>{{ row.data }}</td>
-        <td>{{ row.time }}</td>
-        <td>{{ row.speed }}</td>
-        <td>{{ row.position }}</td>
-    </tr>
-    {% endfor %}
-</table>
+        <table class="table table-striped table-bordered mt-3">
+            <thead class="table-dark">
+                <tr>
+                    <th>Label</th>
+                    <th>Time</th>
+                    <th>Speed</th>
+                    <th>Position</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in data %}
+                <tr>
+                    <td>{{ row.data }}</td>
+                    <td>{{ row.time }}</td>
+                    <td>{{ row.speed }}</td>
+                    <td>{{ row.position }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
 
-<div style="text-align:center; margin-top:20px;">
-    <a href="/one"><button style="padding: 12px 24px; font-size:18px;">One</button></a>
-    <a href="/two"><button style="padding: 12px 24px; font-size:18px;"><b>Two</b></button></a>
-    <a href="/three"><button style="padding: 12px 24px; font-size:18px;">Three</button></a>
-    <a href="/four"><button style="padding: 12px 24px; font-size:18px;">Four</button></a>
+    </div>
 </div>
-
-</body>
-</html>
+{% endblock %}

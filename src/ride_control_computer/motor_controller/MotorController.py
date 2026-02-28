@@ -202,6 +202,10 @@ class MotorController(ABC):
             Temperature in degrees Celsius.
         """
         ...
+    @abstractmethod
+    def getTemperatures(self) -> tuple[float, float]:
+        """Gets the tempatures from both sensor"""
+        return self.getTemperature(1), self.getTemperature(2)
 
     @abstractmethod
     def getControllerStatus(self) -> str:

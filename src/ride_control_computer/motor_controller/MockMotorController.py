@@ -59,19 +59,22 @@ class MockMotorController(MotorController):
         pass
 
     def getMotorPositions(self) -> tuple[int, int]:
-        return random.randint(0,10), random.randint(0,10)
+        return random.randint(0,256), random.randint(0,256)
 
     def getMotorCurrent(self, motor: int) -> float:
         pass
 
     def getMotorCurrents(self) -> tuple[float, float]:
-        pass
+        return random.randint(0,10), random.randint(0,10)
 
     def getVoltage(self) -> float:
-        pass
+        return random.randint(0,100)
 
     def getTemperature(self, sensor: int) -> float:
-        pass
+        return random.randint(0,100)
+
+    def getTemperatures(self) -> tuple[float, float]:
+        return random.randint(0,100), random.randint(0,100)
 
     def getControllerStatus(self) -> str:
         pass

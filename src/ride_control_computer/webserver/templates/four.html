@@ -1,90 +1,107 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Ride Comparison</title>
-    <meta http-equiv="refresh" content="1">
-    <style>
-        body {
-            text-align: center;
-            font-family: Arial;
-        }
-        table {
-            margin: auto;
-            font-size: 18px;
-            border-collapse: collapse;
-        }
-        th, td {
-            border: 1px solid black;
-            padding: 10px 20px;
-        }
-        th {
-            background-color: #f2f2f2;
-        }
-        .section-divider td {
-            border: none;
-            padding: 15px;
-        }
-    </style>
-</head>
-<body>
+{% extends "base.html" %}
 
-    <h1>Ride Telemetry Comparison</h1>
-    <h2>Elapsed Time: {{ "%.2f"|format(elapsed) }} s</h2>
-    <h3>Compared Against {{ count }} Previous Rides</h3>
+{% block content %}
+<div class="card shadow">
+    <div class="card-body">
 
-    <table>
-        <tr>
-            <th></th>
-            <th>Motor 1</th>
-            <th>Motor 2</th>
-        </tr>
+        <h3>Telemetry Comparison</h3>
 
-        <tr>
-            <td><b>Current Position</b></td>
-            <td>{{ m1_pos }}</td>
-            <td>{{ m2_pos }}</td>
-        </tr>
+        <p>Elapsed Time: {{ elapsed }}</p>
+        <p>Ride Count: {{ count }}</p>
 
-        <tr>
-            <td><b>Average Position</b></td>
-            <td>{{ "%.1f"|format(avg_m1_pos) }}</td>
-            <td>{{ "%.1f"|format(avg_m2_pos) }}</td>
-        </tr>
+        <table class="table table-bordered mt-3">
+            <thead class="table-dark">
+                <tr>
+                    <th></th>
+                    <th>Current</th>
+                    <th>Average</th>
+                    <th>Difference</th>
+                </tr>
+            </thead>
+            <tbody>
 
-        <tr>
-            <td><b>Position Difference</b></td>
-            <td>{{ "%.1f"|format(diff_m1_pos) }}</td>
-            <td>{{ "%.1f"|format(diff_m2_pos) }}</td>
-        </tr>
+                <!-- Positions -->
+                <tr>
+                    <td>Motor 1 Position</td>
+                    <td id="m1_pos">{{ m1_pos }}</td>
+                    <td id="avg_m1_pos">{{ avg_m1_pos }}</td>
+                    <td id="diff_m1_pos">{{ diff_m1_pos }}</td>
+                </tr>
+                <tr>
+                    <td>Motor 2 Position</td>
+                    <td id ="m2_pos">{{ m2_pos }}</td>
+                    <td id ="avg_m2_pos">{{ avg_m2_pos }}</td>
+                    <td id ="diff_m2_pos">{{ diff_m2_pos }}</td>
+                </tr>
 
-        <tr class="section-divider">
-            <td colspan="3"><hr></td>
-        </tr>
+                <!-- Velocity -->
+                <tr>
+                    <td>Motor 1 Velocity</td>
+                    <td id ="m1_vel">{{ m1_vel }}</td>
+                    <td id ="avg_m1_vel">{{ avg_m1_vel }}</td>
+                    <td id ="diff_m1_vel">{{ diff_m1_vel }}</td>
+                </tr>
+                <tr>
+                    <td>Motor 2 Velocity</td>
+                    <td id ="m2_vel">{{ m2_vel }}</td>
+                    <td id ="avg_m2_vel">{{ avg_m2_vel }}</td>
+                    <td id ="diff_m2_vel">{{ diff_m2_vel }}</td>
+                </tr>
 
-        <tr>
-            <td><b>Current Velocity</b></td>
-            <td>{{ "%.1f"|format(m1_vel) }}</td>
-            <td>{{ "%.1f"|format(m2_vel) }}</td>
-        </tr>
+                <!-- Current -->
+                <tr>
+                    <td>Motor 1 Current</td>
+                    <td id ="m1_current">{{ m1_current }}</td>
+                    <td id ="avg_m1_cur">{{ avg_m1_cur }}</td>
+                    <td id ="diff_m1_cur">{{ diff_m1_cur }}</td>
+                </tr>
+                <tr>
+                    <td>Motor 2 Current</td>
+                    <td id ="m2_current">{{ m2_current }}</td>
+                    <td id ="avg_m2_cur">{{ avg_m2_cur }}</td>
+                    <td id ="diff_m2_cur">{{ diff_m2_cur }}</td>
+                </tr>
 
-        <tr>
-            <td><b>Average Velocity</b></td>
-            <td>{{ "%.1f"|format(avg_m1_vel) }}</td>
-            <td>{{ "%.1f"|format(avg_m2_vel) }}</td>
-        </tr>
+                <!-- Voltage -->
+                <tr>
+                    <td>Bus Voltage</td>
+                    <td id ="voltage">{{ voltage }}</td>
+                    <td id ="avg_vol">{{ avg_vol }}</td>
+                    <td id ="diff_vol">{{ diff_vol }}</td>
+                </tr>
 
-        <tr>
-            <td><b>Velocity Difference</b></td>
-            <td>{{ "%.1f"|format(diff_m1_vel) }}</td>
-            <td>{{ "%.1f"|format(diff_m2_vel) }}</td>
-        </tr>
+                <!-- Temperature -->
+                <tr>
+                    <td>Motor 1 Temperature</td>
+                    <td id ="m1_temp">{{ m1_temp }}</td>
+                    <td id ="avg_m1_temp">{{ avg_m1_temp }}</td>
+                    <td id ="diff_m1_temp">{{ diff_m1_temp }}</td>
+                </tr>
+                <tr>
+                    <td>Motor 2 Temperature</td>
+                    <td id ="m2_temp">{{ m2_temp }}</td>
+                    <td id ="avg_m2_temp">{{ avg_m2_temp }}</td>
+                    <td id ="diff_m2_temp">{{ diff_m2_temp }}</td>
+                </tr>
 
-    </table>
-    <div style="text-align:center; margin-top:30px;">
-        <a href="/one"><button style="padding: 12px 24px; font-size:18px;">One</button></a>
-        <a href="/two"><button style="padding: 12px 24px; font-size:18px;">Two</button></a>
-        <a href="/three"><button style="padding: 12px 24px; font-size:18px;">Three</button></a>
-        <a href="/four"><button style="padding: 12px 24px; font-size:18px;"><b>Four</b></button></a>
+            </tbody>
+        </table>
+
     </div>
-</body>
-</html>
+</div>
+<script>
+setInterval(async () => {
+    const response = await fetch("/four-data");
+    const data = await response.json();
+
+    for (const key in data) {
+        const element = document.getElementById(key);
+        if (element) {
+            element.innerText = data[key].toFixed
+                ? data[key].toFixed(2)
+                : data[key];
+        }
+    }
+}, 1000);
+</script>
+{% endblock %}

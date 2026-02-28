@@ -92,6 +92,9 @@ def main():
         themeStatus=tc.getStatus,
         getPositions=mc.getMotorPositions,
         getAverageSpeed=getAverageSpeed,
+        getVoltage=mc.getVoltage,
+        getTemperatures=mc.getTemperatures,
+        getCurrents=mc.getMotorCurrents
         )
 
     rideControlComputer = RCC(mc, cp, tc)

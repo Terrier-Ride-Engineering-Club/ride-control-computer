@@ -16,6 +16,9 @@ class WebserverController(ABC):
                  themeStatus: Callable[[], str],
                  getPositions: Callable[[], tuple[int, int]],
                  getAverageSpeed: Callable[[], float],
+                 getCurrents: Callable[[], tuple[float, float]],
+                 getVoltage: Callable[[], float],
+                 getTemperatures: Callable[[], tuple[float, float]],
                  ):
         self.app = Flask(__name__)
         self.getSpeed = getSpeeds
@@ -25,6 +28,9 @@ class WebserverController(ABC):
         self.themeStatus = themeStatus
         self.getPositions = getPositions
         self.getAverageSpeed = getAverageSpeed
+        self.getCurrents = getCurrents
+        self.getVoltage = getVoltage
+        self.getTemperatures = getTemperatures
         self.rcc = None
 
     def set_rcc(self,rcc):
@@ -75,6 +81,10 @@ class WebserverController(ABC):
 
         @self.app.route('/four')
         def four():
+            ...
+
+        @self.app.route('/four-data')
+        def four_data():
             ...
 
         self.app.run(debug=False)

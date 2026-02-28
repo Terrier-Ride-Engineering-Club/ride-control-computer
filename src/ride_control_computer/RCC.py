@@ -116,8 +116,11 @@ class RCC:
                 positions = self.__motorController.getMotorPositions()
                 velocities = self.__motorController.getMotorSpeeds()
                 elapsed = self.__rideTimer.data.getCurrentRideElapsed()
+                currents = self.__motorController.getMotorCurrents()
+                voltage = self.__motorController.getVoltage()
+                temperatures = self.__motorController.getTemperatures()
 
-                self.__telemetryLogger.logSample(elapsed, positions, velocities)
+                self.__telemetryLogger.logSample(elapsed, positions, velocities, currents, voltage, temperatures)
 
             self.__printTelemetry()
 
