@@ -28,7 +28,7 @@ Mechanical Lead: Daniel Ulrich (dculrich@bu.edu) <br>
 Design Lead: Jon Chuang (chuangj@bu.edu) <br>
 
 ## Requirements
-- Python 3.14
+- Python 3.13.5
 - Raspberry Pi 5 (production) or macOS/Windows/Linux (development)
 
 ## Installation
@@ -81,6 +81,7 @@ git clone https://github.com/Terrier-Ride-Engineering-Club/ride-control-computer
 
 # Create venv and install
 cd /opt/rcc
+sudo apt install liblgpio-dev swig libgpiod-dev python3-dev # install system deps for gpio
 python3 -m venv .venv
 .venv/bin/pip install .
 ```

@@ -7,6 +7,6 @@ class MockControlPanel(ControlPanel):
         super().__init__()
 
     def run(self) -> None:
-        while (True):
+        while not self._stopEvent.is_set():
             self._loop_timer.tick()
             sleep(0.1)
