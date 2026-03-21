@@ -5,7 +5,6 @@ import logging
 import threading
 import time
 from enum import Enum
-from idlelib.debugobj_r import remote_object_tree_item
 
 from ride_control_computer.fault_monitor import Fault, FaultMonitor, FaultSeverity
 from ride_control_computer.motor_controller.mc_faults import registerMotorControllerFaults
