@@ -2,7 +2,7 @@
 # RCC Boot Script
 # Shows a prompt, then either boots to desktop or kiosk mode
 
-TIMEOUT=5
+TIMEOUT=2
 WEBSERVER_URL="http://127.0.0.1:8080"
 
 echo "=========================================="
