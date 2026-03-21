@@ -30,7 +30,7 @@ class MockMotorController(MotorController):
     def driveToPosition(self, motor: int, position: int, speed: int, accel: int, decel: int) -> None:
         pass  # No-op: mock reports isMotorNearTarget=True immediately
 
-    def homeMotors(self, motors: list[int]) -> None:
+    def homeMotors(self) -> None:
         pass  # Mock is always at home
 
     def isAtBottomLimit(self, motor: int) -> bool:

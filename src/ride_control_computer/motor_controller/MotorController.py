@@ -82,14 +82,10 @@ class MotorController(ABC):
         ...
 
     @abstractmethod
-    def homeMotors(self, motors: list[int]) -> None:
+    def homeMotors(self) -> None:
         """
-        Drive specified motors toward the bottom limit switch at homing speed.
+        Drive both motors toward the bottom limit switch at homing speed.
         Stops each motor when its bottom limit switch is triggered.
-        Sets MC state to HOMING; transitions to IDLE when all motors reach home.
-
-        Args:
-            motors: List of motor numbers to home (e.g. [1, 2])
         """
         ...
 
@@ -299,7 +295,7 @@ class MotorController(ABC):
 
     @abstractmethod
     def isHomingComplete(self) -> bool:
-        """True when all motors requested in the last homeMotors() call are at the bottom limit."""
+        """True when both motors are at the bottom limit since the last homeMotors() call."""
         ...
 
     @abstractmethod

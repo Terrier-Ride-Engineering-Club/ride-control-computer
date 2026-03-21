@@ -88,8 +88,8 @@ class RoboClawSerialMotorController(MotorController):
         self._commandJogDir: int          = 0
         # Per-motor drive params: motor → (position, speed, accel, decel)
         self._commandDrive: dict[int, tuple[int, int, int, int]] = {}
-        # Motors requested for homing (persists until next homeMotors() call)
-        self._commandHomingMotors: list[int] = []
+        # Set to True by homeMotors(); cleared implicitly when command switches away from HOME
+        self._homingActive: bool = False
 
         # --- Telemetry cache (serial thread writes, any thread reads) ---
         self._telemetry = ControllerTelemetry()
@@ -198,11 +198,10 @@ class RoboClawSerialMotorController(MotorController):
             self._commandType = _CommandType.DRIVE
             self._commandDrive[motor] = (position, speed, accel, decel)
 
-    def homeMotors(self, motors: list[int]) -> None:
-        toHome = [m for m in motors if not self._limitCache[m]["bottom"]]
+    def homeMotors(self) -> None:
         with self._commandLock:
             self._commandType = _CommandType.HOME
-            self._commandHomingMotors = toHome
+            self._homingActive = True
 
     def isAtBottomLimit(self, motor: int) -> bool:
         return self._limitCache[motor]["bottom"]
@@ -247,12 +246,12 @@ class RoboClawSerialMotorController(MotorController):
         return abs(s1) < self.STOPPED_THRESHOLD and abs(s2) < self.STOPPED_THRESHOLD
 
     def isHomingComplete(self) -> bool:
-        """True when all motors requested in the last homeMotors() call are at the bottom limit."""
+        """True when both motors are at the bottom limit since the last homeMotors() call."""
         with self._commandLock:
-            homingMotors = list(self._commandHomingMotors)
-        if not homingMotors:
+            homingActive = self._homingActive
+        if not homingActive:
             return False
-        return all(self._limitCache[m]["bottom"] for m in homingMotors)
+        return self._limitCache[1]["bottom"] and self._limitCache[2]["bottom"]
 
     # =========================================================================
     #                           MOTOR TELEMETRY
@@ -419,12 +418,11 @@ class RoboClawSerialMotorController(MotorController):
             return
 
         with self._commandLock:
-            cmdType        = self._commandType
-            cmdDecel       = self._commandDecel
-            cmdJogMotor    = self._commandJogMotor
-            cmdJogDir      = self._commandJogDir
-            cmdDrive       = dict(self._commandDrive)
-            cmdHomingMotors = list(self._commandHomingMotors)
+            cmdType     = self._commandType
+            cmdDecel    = self._commandDecel
+            cmdJogMotor = self._commandJogMotor
+            cmdJogDir   = self._commandJogDir
+            cmdDrive    = dict(self._commandDrive)
 
         if cmdType == _CommandType.STOP:
             for motor in [1, 2]:
@@ -441,15 +439,14 @@ class RoboClawSerialMotorController(MotorController):
                 )
 
         elif cmdType == _CommandType.HOME:
-            allAtHome = True
-            for motor in cmdHomingMotors:
-                if not self._limitCache[motor]["bottom"]:
-                    self._roboClaw.set_speed_with_acceleration(motor, -HOMING_SPEED, HOMING_ACCELERATION)
-                    allAtHome = False
-                else:
-                    self._roboClaw.set_speed_with_acceleration(motor, 0, HOMING_ACCELERATION)
-            # Auto-switch to STOP once every motor has reached its home limit
-            if allAtHome and cmdHomingMotors:
+            m1Home = self._limitCache[1]["bottom"]
+            m2Home = self._limitCache[2]["bottom"]
+            spd1 = 0 if m1Home else -HOMING_SPEED
+            spd2 = 0 if m2Home else -HOMING_SPEED
+            self._roboClaw.set_speed_with_acceleration(1, spd1, HOMING_ACCELERATION)
+            self._roboClaw.set_speed_with_acceleration(2, spd2, HOMING_ACCELERATION)
+            # Auto-switch to STOP once both motors have reached the home limit
+            if m1Home and m2Home:
                 with self._commandLock:
                     self._commandType  = _CommandType.STOP
                     self._commandDecel = self.STOP_DECELERATION

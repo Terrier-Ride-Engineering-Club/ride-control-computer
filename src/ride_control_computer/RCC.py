@@ -199,7 +199,7 @@ class RCC:
         elif newState == RCCState.STOPPING:
             self.__stateEntryTime = time.monotonic()
             self.__sequencer.abort()
-            self.__motorController.homeMotors([1, 2])
+            self.__motorController.homeMotors()
             self.__themingController.stopShow()
         elif newState == RCCState.RESETTING:
             self.__stateEntryTime = time.monotonic()
