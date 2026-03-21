@@ -329,6 +329,16 @@ class RCC:
     def getTelemetryLogger(self):
         return self.__telemetryLogger
 
+    def getWatchdogStatus(self) -> str:
+        """Returns watchdog status as a display string: DISABLED, OK, PLC_ERROR, or TIMEOUT."""
+        if self.__watchdog is None:
+            return "DISABLED"
+        if self.__watchdog.isTimedOut():
+            return "TIMEOUT"
+        if not self.__watchdog.isPlcOk():
+            return "PLC_ERROR"
+        return "OK"
+
     def getActiveFaults(self) -> list[dict]:
         """Returns currently active faults as serializable dicts for the webserver."""
         result = []

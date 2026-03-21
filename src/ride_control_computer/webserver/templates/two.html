@@ -12,6 +12,8 @@
         <h5 class="mb-0 me-2">System Status</h5>
         <span id="rcc-badge" class="badge bg-{{ rcc_colors.get(rcc_state, 'secondary') }} fs-6">RCC: {{ rcc_state }}</span>
         <span id="mc-badge"  class="badge bg-{{ 'success' if mc_connected else 'danger' }} fs-6">MC: {{ 'CONNECTED' if mc_connected else 'DISCONNECTED' }}</span>
+        {% set wd_color = {'OK': 'success', 'TIMEOUT': 'danger', 'PLC_ERROR': 'warning', 'DISABLED': 'secondary'} %}
+        <span id="wd-badge" class="badge bg-{{ wd_color.get(watchdog, 'secondary') }} fs-6">WD: {{ watchdog }}</span>
     </div>
 </div>
 
@@ -139,6 +141,12 @@ setInterval(async () => {
     allColors.forEach(c => mcBadge.classList.remove('bg-' + c));
     mcBadge.classList.add(data.mc_connected ? 'bg-success' : 'bg-danger');
     mcBadge.innerText = 'MC: ' + (data.mc_connected ? 'CONNECTED' : 'DISCONNECTED');
+
+    const wdColors = { 'OK': 'success', 'TIMEOUT': 'danger', 'PLC_ERROR': 'warning', 'DISABLED': 'secondary' };
+    const wdBadge = document.getElementById("wd-badge");
+    allColors.forEach(c => wdBadge.classList.remove('bg-' + c));
+    wdBadge.classList.add('bg-' + (wdColors[data.watchdog] || 'secondary'));
+    wdBadge.innerText = 'WD: ' + data.watchdog;
 
     document.getElementById("m1_speed").innerText   = data.m1_speed.toFixed(2);
     document.getElementById("m2_speed").innerText   = data.m2_speed.toFixed(2);

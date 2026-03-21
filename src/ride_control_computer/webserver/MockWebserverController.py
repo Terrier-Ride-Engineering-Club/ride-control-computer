@@ -174,10 +174,12 @@ class MockWebserverController(WebserverController):
 
             console_output = self.rcc.getConsoleOutput() if self.rcc and hasattr(self.rcc, "getConsoleOutput") else ""
             faults = self.rcc.getActiveFaults() if self.rcc else []
+            watchdog = self.rcc.getWatchdogStatus() if self.rcc else "DISABLED"
 
             return render_template("two.html",
                 rcc_state=rcc_state,
                 mc_connected=mc_connected,
+                watchdog=watchdog,
                 speeds=speeds,
                 positions=positions,
                 temps=temps,
@@ -206,9 +208,11 @@ class MockWebserverController(WebserverController):
             elapsed = self.getElapsedTime() or 0
 
             faults = self.rcc.getActiveFaults() if self.rcc else []
+            watchdog = self.rcc.getWatchdogStatus() if self.rcc else "DISABLED"
             return jsonify({
                 "rcc_state": rcc_state,
                 "mc_connected": mc_connected,
+                "watchdog": watchdog,
                 "m1_speed": speeds[0],
                 "m2_speed": speeds[1],
                 "m1_pos": positions[0],

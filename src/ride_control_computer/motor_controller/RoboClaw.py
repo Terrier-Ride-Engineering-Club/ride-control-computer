@@ -254,7 +254,7 @@ class RoboClaw:
         status, = self._read(Cmd.GETERROR, '>I')
 
         status_flags = {
-            # --- Errors (persist until reset; E-Stop clears on read) ---
+            # --- Errors (persist until reset; E-Stop clears once underlying condition is cleared) ---
             0x00000001: 'E-Stop',
             0x00000002: 'Temperature Error',
             0x00000004: 'Temperature 2 Error',
