@@ -24,17 +24,14 @@ class ControllerTelemetry:
     motors: dict[int, MotorTelemetry] = field(default_factory=lambda: {1: MotorTelemetry(), 2: MotorTelemetry()})
     voltage: float = 0.0
     status: str = "Unknown"
+    rawStatus: int = 0
     temp1: float = 0.0
     temp2: float = 0.0
-    last_update: float = 0.0
+    lastUpdate: float = 0.0
 
 class MotorControllerState(Enum):
-    IDLE =          0
-    JOGGING =       1
-    HOMING =        2
-    SEQUENCING =    3
-    STOPPING =      4
-    DISABLED =      5
+    DISABLED = 0   # No hardware connection; all commands are no-ops
+    ACTIVE   = 1   # Connected and following commands
 
 class MotorController(ABC):
     """
@@ -42,8 +39,7 @@ class MotorController(ABC):
 
     This motor controller is responsible for the following:
         1. Talking to an implementation-specific motor controller.
-        2. Taking motor start/stop commands.
-            a. When given the start command, the motor controller should follow a pre-defined ride sequence.
+        2. Executing motor commands (position, jog, stop, home).
         3. Providing feedback on the state of the motor controller, including motor speed, temp, etc.
             a. This information is available via get() functions in this interface.
     """
@@ -72,13 +68,46 @@ class MotorController(ABC):
     # =========================================================================
 
     @abstractmethod
-    def startRideSequence(self):
-        """Starts the ride sequence."""
+    def driveToPosition(self, motor: int, position: int, speed: int, accel: int, decel: int) -> None:
+        """
+        Drive motor to an absolute encoder position (fire-and-forget; hardware manages motion).
+
+        Args:
+            motor: Motor number (1 or 2)
+            position: Target encoder count
+            speed: Max speed in QPPS
+            accel: Acceleration in QPPS/s
+            decel: Deceleration in QPPS/s
+        """
         ...
 
     @abstractmethod
-    def home(self):
-        """Stops the ride sequence and brings the motors to the home position."""
+    def homeMotors(self) -> None:
+        """
+        Drive both motors toward the bottom limit switch at homing speed.
+        Stops each motor when its bottom limit switch is triggered.
+        """
+        ...
+
+    @abstractmethod
+    def isAtBottomLimit(self, motor: int) -> bool:
+        """True if the bottom limit switch for this motor is currently active."""
+        ...
+
+    @abstractmethod
+    def isAtTopLimit(self, motor: int) -> bool:
+        """True if the top limit switch for this motor is currently active."""
+        ...
+
+    @abstractmethod
+    def isMotorNearTarget(self, motor: int, tolerance: int = 50) -> bool:
+        """
+        True if the motor encoder is within tolerance counts of the last commanded position.
+
+        Args:
+            motor: Motor number (1 or 2)
+            tolerance: Acceptable error in encoder counts
+        """
         ...
 
     @abstractmethod
@@ -202,6 +231,10 @@ class MotorController(ABC):
             Temperature in degrees Celsius.
         """
         ...
+    @abstractmethod
+    def getTemperatures(self) -> tuple[float, float]:
+        """Gets the tempatures from both sensor"""
+        return self.getTemperature(1), self.getTemperature(2)
 
     @abstractmethod
     def getControllerStatus(self) -> str:
@@ -210,6 +243,29 @@ class MotorController(ABC):
 
         Returns:
             Human-readable status string (e.g., "Normal", "E-Stop", "M1 Over Current Warning")
+        """
+        ...
+
+    @abstractmethod
+    def getRawControllerStatus(self) -> int:
+        """
+        Gets the raw hardware status register value.
+
+        Returns:
+            Raw uint32 status register (0 = Normal).
+        """
+        ...
+
+    @abstractmethod
+    def getLastMotorCommand(self, motor: int) -> tuple[int, int, int, int] | None:
+        """
+        Gets the last position command issued to a motor.
+
+        Args:
+            motor: Motor number (1 or 2)
+
+        Returns:
+            (position, speed, accel, decel) tuple, or None if no command has been issued.
         """
         ...
 
@@ -226,6 +282,25 @@ class MotorController(ABC):
     def getState(self) -> MotorControllerState:
         """Gets the current state of the motor controller."""
         return self._state
+
+    @abstractmethod
+    def heartbeat(self) -> None:
+        """
+        Called by the RCC main thread every loop tick to authorise continued
+        command execution.  If not called within the implementation's TTL, the
+        serial thread stops sending commands so the hardware watchdog can fire.
+        """
+        ...
+
+    @abstractmethod
+    def areMotorsStopped(self) -> bool:
+        """True when both motors are below the stopped speed threshold."""
+        ...
+
+    @abstractmethod
+    def isHomingComplete(self) -> bool:
+        """True when both motors are at the bottom limit since the last homeMotors() call."""
+        ...
 
     @abstractmethod
     def isEstopActive(self) -> bool:
