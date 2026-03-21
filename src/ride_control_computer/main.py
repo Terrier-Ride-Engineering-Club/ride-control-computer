@@ -3,16 +3,13 @@
 
 import argparse
 import logging
+import signal
 from datetime import datetime
 from pathlib import Path
-
-import serial.serialutil
 
 from ride_control_computer.RCC import RCC
 from ride_control_computer.control_panel.MockControlPanel import MockControlPanel
 from ride_control_computer.motor_controller.MockMotorController import MockMotorController
-from ride_control_computer.motor_controller.RoboClawSerialMC import RoboClawSerialMotorController
-from ride_control_computer.motor_controller.RoboClaw import RoboClaw
 from ride_control_computer.theming_controller.MockThemeingController import MockThemingController
 from ride_control_computer.webserver.MockWebserverController import MockWebserverController
 # SETUP LOGGING
@@ -38,56 +35,65 @@ def main():
         action="store_true",
         help="Use hardware implementations instead of mocks (for Pi deployment)"
     )
+    parser.add_argument(
+        "--web-panel",
+        action="store_true",
+        help="Use WebControlPanel (browser UI) instead of the physical RCP hardware"
+    )
     args = parser.parse_args()
 
     if args.hardware:
         logger = logging.getLogger(__name__)
         logger.info("Starting with HARDWARE implementations")
 
-        from ride_control_computer.motor_controller.RoboClaw import RoboClaw
         from ride_control_computer.motor_controller.RoboClawSerialMC import RoboClawSerialMotorController
 
-        # Try ports in order until one works
         ROBOCLAW_PORTS = [
             '/dev/ttyAMA1',   # Pi GPIO serial
             '/dev/ttyACM0',   # USB (Pi)
             '/dev/ttyACM1',   # USB (Pi fallback)
         ]
+        WATCHDOG_PORT = '/dev/ttyUSB0'  # Arduino Nano (PLC) via USB CDC
 
-        roboclaw = None
-        for port in ROBOCLAW_PORTS:
-            try:
-                roboclaw = RoboClaw(port=port)
-                logger.info(f"RoboClaw connected on {port}")
-                break
-            except serial.serialutil.SerialException:
-                logger.debug(f"RoboClaw not found on {port}")
-
-        if roboclaw is None:
-            raise RuntimeError(f"RoboClaw not found on any port: {ROBOCLAW_PORTS}")
-
-        mc = RoboClawSerialMotorController(roboclaw)
-        # TODO: Add hardware ControlPanel when implemented
-        cp = MockControlPanel()
+        mc = RoboClawSerialMotorController(ROBOCLAW_PORTS)
         # TODO: Add hardware ThemingController when implemented
         tc = MockThemingController()
     else:
         logger = logging.getLogger(__name__)
         logger.info("Starting with MOCK implementations")
 
+        WATCHDOG_PORT = None
+
         mc = MockMotorController()
-        cp = MockControlPanel()
         tc = MockThemingController()
+
+    if args.web_panel:
+        logger = logging.getLogger(__name__)
+        logger.info("Control panel: WEB (http://0.0.0.0:5001)")
+        from ride_control_computer.control_panel.WebControlPanel import WebControlPanel
+        cp = WebControlPanel()
+    elif args.hardware:
+        from ride_control_computer.control_panel.HardwareControlPanel import HardwareControlPanel
+        cp = HardwareControlPanel()
+    else:
+        cp = MockControlPanel()
 
     wc = MockWebserverController(
         getSpeeds=mc.getMotorSpeeds,
         getState=mc.getState,
         startTheming=tc.startShow,
         stopTheming=tc.stopShow,
-        themeStatus=tc.status
+        themeStatus=lambda: tc.status
     )
 
-    rideControlComputer = RCC(mc, cp, tc, wc)
+    rideControlComputer = RCC(mc, cp, tc, wc, watchdogPort=WATCHDOG_PORT)
+
+    def _shutdown(sig, frame):
+        rideControlComputer.shutdown()
+
+    signal.signal(signal.SIGTERM, _shutdown)
+    signal.signal(signal.SIGINT, _shutdown)
+
     rideControlComputer.run()
 
 if __name__ == '__main__':
