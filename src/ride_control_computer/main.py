@@ -47,6 +47,11 @@ def main():
         action="store_true",
         help="Use WebControlPanel (browser UI) instead of the physical RCP control hardware"
     )
+    parser.add_argument(
+        "--no-watchdog",
+        action="store_true",
+        help="Disable PLC watchdog (for testing without the safety PLC connected)"
+    )
     args = parser.parse_args()
 
     if args.hardware:
@@ -60,7 +65,7 @@ def main():
             '/dev/ttyACM0',   # USB (Pi)
             '/dev/ttyACM1',   # USB (Pi fallback)
         ]
-        WATCHDOG_PORT = '/dev/ttyUSB0'  # Arduino Nano (PLC) via USB CDC
+        WATCHDOG_PORT = None if args.no_watchdog else '/dev/ttyUSB0'  # Arduino Nano (PLC) via USB CDC
 
         mc = RoboClawSerialMotorController(ROBOCLAW_PORTS)
         # TODO: Add hardware ThemingController when implemented
