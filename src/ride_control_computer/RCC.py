@@ -351,14 +351,14 @@ class RCC:
         return result
 
     def getActiveFaults(self) -> list[dict]:
-        """Returns currently active faults as serializable dicts for the webserver.
-
-        While in ESTOP, returns the faults that triggered the latch — even if the
-        conditions have since cleared — so the operator knows what caused it.
-        """
-        if self.__state == RCCState.ESTOP and self.__lastEstopFaults:
-            return self.__lastEstopFaults
+        """Returns currently active fault conditions (live peek, no side effects)."""
         return self.__serializeFaults(self.__faultMonitor.peekActiveFaults())
+
+    def getLastEstopFaults(self) -> list[dict]:
+        """Returns the faults that triggered the most recent E-Stop latch.
+        Persists until the operator presses reset (cleared on RESETTING entry).
+        """
+        return self.__lastEstopFaults
 
     # =========================================================================
     #                           CONTROL PANEL CALLBACKS

@@ -17,29 +17,46 @@
     </div>
 </div>
 
-<!-- ===== FAULTS ===== -->
-<div class="card shadow mb-4 border-danger" id="faultCard">
+<!-- ===== ACTIVE FAULTS ===== -->
+<div class="card shadow mb-3 border-danger" id="faultCard">
     <div class="card-header bg-danger text-white fw-bold">Active Faults</div>
     <div class="card-body p-0">
-        <table class="table table-sm table-bordered mb-0" id="faultTable">
+        <table class="table table-sm table-bordered mb-0">
             <thead class="table-dark">
-                <tr>
-                    <th>Code</th>
-                    <th>Severity</th>
-                    <th>Description</th>
-                </tr>
+                <tr><th>Code</th><th>Severity</th><th>Description</th></tr>
             </thead>
             <tbody id="faultBody">
                 {% if faults %}
                     {% for f in faults %}
                     <tr class="{{ 'table-danger' if f.severity == 'HIGH' else 'table-warning' if f.severity == 'MEDIUM' else '' }}">
-                        <td><code>{{ f.code }}</code></td>
-                        <td>{{ f.severity }}</td>
-                        <td>{{ f.description }}</td>
+                        <td><code>{{ f.code }}</code></td><td>{{ f.severity }}</td><td>{{ f.description }}</td>
                     </tr>
                     {% endfor %}
                 {% else %}
-                    <tr id="noFaultRow"><td colspan="3" class="text-muted text-center">No active faults</td></tr>
+                    <tr><td colspan="3" class="text-muted text-center">No active faults</td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- ===== LAST E-STOP FAULTS ===== -->
+<div class="card shadow mb-4 border-warning" id="lastEstopCard">
+    <div class="card-header bg-warning text-dark fw-bold">Last E-Stop Cause</div>
+    <div class="card-body p-0">
+        <table class="table table-sm table-bordered mb-0">
+            <thead class="table-dark">
+                <tr><th>Code</th><th>Severity</th><th>Description</th></tr>
+            </thead>
+            <tbody id="lastEstopBody">
+                {% if last_estop_faults %}
+                    {% for f in last_estop_faults %}
+                    <tr class="{{ 'table-danger' if f.severity == 'HIGH' else 'table-warning' if f.severity == 'MEDIUM' else '' }}">
+                        <td><code>{{ f.code }}</code></td><td>{{ f.severity }}</td><td>{{ f.description }}</td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr><td colspan="3" class="text-muted text-center">No E-Stop recorded this session</td></tr>
                 {% endif %}
             </tbody>
         </table>
@@ -160,22 +177,28 @@ setInterval(async () => {
     document.getElementById("elapsed").innerText    = data.elapsed.toFixed(1);
     document.getElementById("avg_time").innerText   = data.avg_time.toFixed(1);
 
-    const faults = data.faults || [];
-    const tbody = document.getElementById("faultBody");
-    const card = document.getElementById("faultCard");
-    tbody.innerHTML = "";
-    if (faults.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="3" class="text-muted text-center">No active faults</td></tr>';
-        card.classList.remove("border-danger");
-        card.querySelector(".card-header").classList.replace("bg-danger", "bg-secondary");
-    } else {
-        card.classList.add("border-danger");
-        card.querySelector(".card-header").classList.replace("bg-secondary", "bg-danger");
-        for (const f of faults) {
-            const rowClass = f.severity === "HIGH" ? "table-danger" : f.severity === "MEDIUM" ? "table-warning" : "";
-            tbody.innerHTML += `<tr class="${rowClass}"><td><code>${f.code}</code></td><td>${f.severity}</td><td>${f.description}</td></tr>`;
+    function renderFaultTable(bodyId, cardId, faults, emptyMsg, activeHeaderClass, inactiveHeaderClass, activeBorderClass) {
+        const tbody = document.getElementById(bodyId);
+        const card  = document.getElementById(cardId);
+        tbody.innerHTML = "";
+        if (faults.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="3" class="text-muted text-center">${emptyMsg}</td></tr>`;
+            card.classList.remove(activeBorderClass);
+            card.querySelector(".card-header").classList.replace(activeHeaderClass, inactiveHeaderClass);
+        } else {
+            card.classList.add(activeBorderClass);
+            card.querySelector(".card-header").classList.replace(inactiveHeaderClass, activeHeaderClass);
+            for (const f of faults) {
+                const rowClass = f.severity === "HIGH" ? "table-danger" : f.severity === "MEDIUM" ? "table-warning" : "";
+                tbody.innerHTML += `<tr class="${rowClass}"><td><code>${f.code}</code></td><td>${f.severity}</td><td>${f.description}</td></tr>`;
+            }
         }
     }
+
+    renderFaultTable("faultBody", "faultCard", data.faults || [], "No active faults",
+        "bg-danger", "bg-secondary", "border-danger");
+    renderFaultTable("lastEstopBody", "lastEstopCard", data.last_estop_faults || [], "No E-Stop recorded this session",
+        "bg-warning", "bg-secondary", "border-warning");
 
 }, 1000);
 </script>

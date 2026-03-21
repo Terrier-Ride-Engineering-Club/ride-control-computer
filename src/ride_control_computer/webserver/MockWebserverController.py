@@ -174,6 +174,7 @@ class MockWebserverController(WebserverController):
 
             console_output = self.rcc.getConsoleOutput() if self.rcc and hasattr(self.rcc, "getConsoleOutput") else ""
             faults = self.rcc.getActiveFaults() if self.rcc else []
+            last_estop_faults = self.rcc.getLastEstopFaults() if self.rcc else []
             watchdog = self.rcc.getWatchdogStatus() if self.rcc else "DISABLED"
 
             return render_template("two.html",
@@ -189,6 +190,7 @@ class MockWebserverController(WebserverController):
                 elapsed=elapsed,
                 console=console_output,
                 faults=faults,
+                last_estop_faults=last_estop_faults,
             )
 
         @self.app.route('/two-data')
@@ -208,6 +210,7 @@ class MockWebserverController(WebserverController):
             elapsed = self.getElapsedTime() or 0
 
             faults = self.rcc.getActiveFaults() if self.rcc else []
+            last_estop_faults = self.rcc.getLastEstopFaults() if self.rcc else []
             watchdog = self.rcc.getWatchdogStatus() if self.rcc else "DISABLED"
             return jsonify({
                 "rcc_state": rcc_state,
@@ -225,6 +228,7 @@ class MockWebserverController(WebserverController):
                 "avg_time": avg_time,
                 "elapsed": elapsed,
                 "faults": faults,
+                "last_estop_faults": last_estop_faults,
             })
 
         @self.app.route("/start-theming", methods=["POST"])
