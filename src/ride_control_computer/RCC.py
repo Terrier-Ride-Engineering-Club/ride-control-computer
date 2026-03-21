@@ -79,7 +79,11 @@ class RCC:
         self.__sequencer = RideSequencer(
             motorController,
             profile,
-            onTimeout=lambda: self.__setState(RCCState.ESTOP),
+            onTimeout=lambda: self.__latchEstop([{
+                "code": "SEQUENCER_TIMEOUT",
+                "severity": "HIGH",
+                "description": f"Ride segment '{self.__sequencer._currentSegment().name}' timed out",
+            }]),
         )
 
         self.__faultMonitor = FaultMonitor()
@@ -238,6 +242,11 @@ class RCC:
         elif self.__state == RCCState.RESETTING:
             self.__checkResettingComplete()
 
+    def __latchEstop(self, cause: list[dict]) -> None:
+        """Save the E-Stop cause and transition to ESTOP state."""
+        self.__lastEstopFaults = cause
+        self.__setState(RCCState.ESTOP)
+
     def __monitorSafety(self):
         """Evaluate all fault conditions; latch E-Stop on any HIGH fault."""
         if self.__state in (RCCState.ESTOP, RCCState.RESETTING, RCCState.FAULT, RCCState.OFF):
@@ -247,8 +256,7 @@ class RCC:
         if highFaults:
             codes = ", ".join(f.code for f in highFaults)
             logger.warning(f"High-severity fault(s) detected — latching E-Stop: {codes}")
-            self.__lastEstopFaults = self.__serializeFaults(highFaults)
-            self.__setState(RCCState.ESTOP)
+            self.__latchEstop(self.__serializeFaults(highFaults))
 
     # =========================================================================
     #                           TIMED STATE TRANSITIONS
@@ -273,7 +281,11 @@ class RCC:
         elapsed = time.monotonic() - self.__stateEntryTime
         if elapsed > self.STOPPING_TIMEOUT_S:
             logger.warning("Stopping timed out — latching E-Stop")
-            self.__setState(RCCState.ESTOP)
+            self.__latchEstop([{
+                "code": "STOPPING_TIMEOUT",
+                "severity": "HIGH",
+                "description": f"Motors did not reach home within {self.STOPPING_TIMEOUT_S:.0f}s timeout",
+            }])
         elif self.__motorController.isHomingComplete():
             logger.info("Homing complete — returning to IDLE")
             self.__setState(RCCState.IDLE)
@@ -291,8 +303,7 @@ class RCC:
             if activeFaults:
                 codes = ", ".join(f.code for f in activeFaults)
                 logger.warning(f"Reset blocked: active fault(s) [{codes}] — returning to E-Stop")
-                self.__lastEstopFaults = self.__serializeFaults(activeFaults)
-                self.__setState(RCCState.ESTOP)
+                self.__latchEstop(self.__serializeFaults(activeFaults))
             elif self.__preEstopState == RCCState.MAINTENANCE:
                 self.__setState(RCCState.MAINTENANCE)
             else:
@@ -400,7 +411,11 @@ class RCC:
     def __onEstop(self, state: MomentaryButtonState) -> None:
         if state == MomentaryButtonState.PRESSED:
             logger.warning("E-Stop button pressed — latching")
-            self.__setState(RCCState.ESTOP)
+            self.__latchEstop([{
+                "code": "MANUAL_ESTOP",
+                "severity": "HIGH",
+                "description": "E-Stop button pressed by operator",
+            }])
 
     def __onPowerSwitch(self, state: SustainedSwitchState) -> None:
         """
@@ -416,7 +431,11 @@ class RCC:
                 self.__setState(RCCState.MAINTENANCE)
             elif self.__state == RCCState.RUNNING:
                 logger.warning("Key switch to MAINTENANCE during RUNNING — fault")
-                self.__setState(RCCState.ESTOP)
+                self.__latchEstop([{
+                    "code": "KEY_SWITCH_FAULT",
+                    "severity": "HIGH",
+                    "description": "Key switch moved to MAINTENANCE while ride was active",
+                }])
 
         elif state == SustainedSwitchState.ON:
             logger.info("Key switch → ON")
