@@ -106,6 +106,7 @@ class RCC:
 
         self.__state = RCCState.IDLE
         self.__preEstopState = RCCState.IDLE
+        self.__lastEstopFaults: list[dict] = []
 
         self.__stateEntryTime = 0.0
 
@@ -209,6 +210,7 @@ class RCC:
             self.__themingController.stopShow()
         elif newState == RCCState.RESETTING:
             self.__stateEntryTime = time.monotonic()
+            self.__lastEstopFaults = []
         elif newState == RCCState.FAULT:
             # The safety PLC will cut ride power immediately on FAULT entry,
             # which means the Pi loses power. haltMotion() here is best-effort.
@@ -245,6 +247,7 @@ class RCC:
         if highFaults:
             codes = ", ".join(f.code for f in highFaults)
             logger.warning(f"High-severity fault(s) detected — latching E-Stop: {codes}")
+            self.__lastEstopFaults = self.__serializeFaults(highFaults)
             self.__setState(RCCState.ESTOP)
 
     # =========================================================================
@@ -288,6 +291,7 @@ class RCC:
             if activeFaults:
                 codes = ", ".join(f.code for f in activeFaults)
                 logger.warning(f"Reset blocked: active fault(s) [{codes}] — returning to E-Stop")
+                self.__lastEstopFaults = self.__serializeFaults(activeFaults)
                 self.__setState(RCCState.ESTOP)
             elif self.__preEstopState == RCCState.MAINTENANCE:
                 self.__setState(RCCState.MAINTENANCE)
@@ -339,17 +343,22 @@ class RCC:
             return "PLC_ERROR"
         return "OK"
 
-    def getActiveFaults(self) -> list[dict]:
-        """Returns currently active faults as serializable dicts for the webserver."""
+    def __serializeFaults(self, faults) -> list[dict]:
         result = []
-        for f in self.__faultMonitor.peekActiveFaults():
+        for f in faults:
             desc = f.description() if callable(f.description) else f.description
-            result.append({
-                "code": f.code,
-                "severity": f.severity.name,
-                "description": desc,
-            })
+            result.append({"code": f.code, "severity": f.severity.name, "description": desc})
         return result
+
+    def getActiveFaults(self) -> list[dict]:
+        """Returns currently active faults as serializable dicts for the webserver.
+
+        While in ESTOP, returns the faults that triggered the latch — even if the
+        conditions have since cleared — so the operator knows what caused it.
+        """
+        if self.__state == RCCState.ESTOP and self.__lastEstopFaults:
+            return self.__lastEstopFaults
+        return self.__serializeFaults(self.__faultMonitor.peekActiveFaults())
 
     # =========================================================================
     #                           CONTROL PANEL CALLBACKS
