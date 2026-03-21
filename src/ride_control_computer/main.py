@@ -95,7 +95,8 @@ def main():
         getAverageSpeed=getAverageSpeed,
         getVoltage=mc.getVoltage,
         getTemperatures=mc.getTemperatures,
-        getCurrents=mc.getMotorCurrents
+        getCurrents=mc.getMotorCurrents,
+        isTelemetryStale=mc.isTelemetryStale,
         )
 
     rideControlComputer = RCC(mc, cp, tc, wc, watchdogPort=WATCHDOG_PORT)

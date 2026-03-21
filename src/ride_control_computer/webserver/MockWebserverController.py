@@ -6,8 +6,8 @@ from waitress import serve
 
 class MockWebserverController(WebserverController):
 
-    def __init__(self, getSpeeds, getState, startTheming, stopTheming, themeStatus, getPositions, getAverageSpeed, getCurrents, getVoltage, getTemperatures):
-        super().__init__(getSpeeds,getState, startTheming, stopTheming, themeStatus, getPositions, getAverageSpeed, getCurrents, getVoltage, getTemperatures)
+    def __init__(self, getSpeeds, getState, startTheming, stopTheming, themeStatus, getPositions, getAverageSpeed, getCurrents, getVoltage, getTemperatures, isTelemetryStale=lambda: True):
+        super().__init__(getSpeeds, getState, startTheming, stopTheming, themeStatus, getPositions, getAverageSpeed, getCurrents, getVoltage, getTemperatures, isTelemetryStale)
 
     def _compute_four_data(self):
         if self.rcc is None:
@@ -167,8 +167,7 @@ class MockWebserverController(WebserverController):
             raw_rcc = str(self.rcc.getState()) if self.rcc else ""
             rcc_state = raw_rcc.split(".", 1)[1] if "." in raw_rcc else raw_rcc
 
-            raw_mc = str(self.getState()) if self.getState() else ""
-            mc_state = raw_mc.split(".", 1)[1] if "." in raw_mc else raw_mc
+            mc_connected = not self.isTelemetryStale()
 
             avg_time = self.getAverageTime() or 0
             elapsed = self.getElapsedTime() or 0
@@ -178,7 +177,7 @@ class MockWebserverController(WebserverController):
 
             return render_template("two.html",
                 rcc_state=rcc_state,
-                mc_state=mc_state,
+                mc_connected=mc_connected,
                 speeds=speeds,
                 positions=positions,
                 temps=temps,
@@ -201,8 +200,7 @@ class MockWebserverController(WebserverController):
             raw_rcc = str(self.rcc.getState()) if self.rcc else ""
             rcc_state = raw_rcc.split(".", 1)[1] if "." in raw_rcc else raw_rcc
 
-            raw_mc = str(self.getState()) if self.getState() else ""
-            mc_state = raw_mc.split(".", 1)[1] if "." in raw_mc else raw_mc
+            mc_connected = not self.isTelemetryStale()
 
             avg_time = self.getAverageTime() or 0
             elapsed = self.getElapsedTime() or 0
@@ -210,7 +208,7 @@ class MockWebserverController(WebserverController):
             faults = self.rcc.getActiveFaults() if self.rcc else []
             return jsonify({
                 "rcc_state": rcc_state,
-                "mc_state": mc_state,
+                "mc_connected": mc_connected,
                 "m1_speed": speeds[0],
                 "m2_speed": speeds[1],
                 "m1_pos": positions[0],

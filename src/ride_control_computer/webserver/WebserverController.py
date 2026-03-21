@@ -19,10 +19,12 @@ class WebserverController(ABC):
                  getCurrents: Callable[[], tuple[float, float]],
                  getVoltage: Callable[[], float],
                  getTemperatures: Callable[[], tuple[float, float]],
+                 isTelemetryStale: Callable[[], bool] = lambda: True,
                  ):
         self.app = Flask(__name__)
         self.getSpeed = getSpeeds
         self.getState = getState
+        self.isTelemetryStale = isTelemetryStale
         self.startTheming = startTheming
         self.stopTheming = stopTheming
         self.themeStatus = themeStatus
