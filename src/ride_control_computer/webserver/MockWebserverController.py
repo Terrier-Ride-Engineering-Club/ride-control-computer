@@ -174,6 +174,7 @@ class MockWebserverController(WebserverController):
             elapsed = self.getElapsedTime() or 0
 
             console_output = self.rcc.getConsoleOutput() if self.rcc and hasattr(self.rcc, "getConsoleOutput") else ""
+            faults = self.rcc.getActiveFaults() if self.rcc else []
 
             return render_template("two.html",
                 rcc_state=rcc_state,
@@ -186,6 +187,7 @@ class MockWebserverController(WebserverController):
                 avg_time=avg_time,
                 elapsed=elapsed,
                 console=console_output,
+                faults=faults,
             )
 
         @self.app.route('/two-data')
@@ -205,6 +207,7 @@ class MockWebserverController(WebserverController):
             avg_time = self.getAverageTime() or 0
             elapsed = self.getElapsedTime() or 0
 
+            faults = self.rcc.getActiveFaults() if self.rcc else []
             return jsonify({
                 "rcc_state": rcc_state,
                 "mc_state": mc_state,
@@ -219,6 +222,7 @@ class MockWebserverController(WebserverController):
                 "voltage": voltage,
                 "avg_time": avg_time,
                 "elapsed": elapsed,
+                "faults": faults,
             })
 
         @self.app.route("/start-theming", methods=["POST"])
@@ -267,7 +271,7 @@ class MockWebserverController(WebserverController):
             name = rcc_state_obj.name if rcc_state_obj else "UNKNOWN"
             return jsonify({
                 "rcc_state": name,
-                "has_active_faults": False,
+                "has_active_faults": bool(self.rcc and self.rcc.getActiveFaults()),
                 "indicators": {
                     "dispatch": "blink"      if rcc_state_obj == RCCState.IDLE     else "off",
                     "reset":    "blink"      if rcc_state_obj == RCCState.ESTOP    else "off",

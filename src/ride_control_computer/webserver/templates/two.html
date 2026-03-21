@@ -19,6 +19,35 @@
     </div>
 </div>
 
+<!-- ===== FAULTS ===== -->
+<div class="card shadow mb-4 border-danger" id="faultCard">
+    <div class="card-header bg-danger text-white fw-bold">Active Faults</div>
+    <div class="card-body p-0">
+        <table class="table table-sm table-bordered mb-0" id="faultTable">
+            <thead class="table-dark">
+                <tr>
+                    <th>Code</th>
+                    <th>Severity</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody id="faultBody">
+                {% if faults %}
+                    {% for f in faults %}
+                    <tr class="{{ 'table-danger' if f.severity == 'HIGH' else 'table-warning' if f.severity == 'MEDIUM' else '' }}">
+                        <td><code>{{ f.code }}</code></td>
+                        <td>{{ f.severity }}</td>
+                        <td>{{ f.description }}</td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr id="noFaultRow"><td colspan="3" class="text-muted text-center">No active faults</td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
 <!-- ===== MOTOR DATA TABLE ===== -->
 <div class="card shadow mb-4">
     <div class="card-body">
@@ -126,6 +155,23 @@ setInterval(async () => {
     document.getElementById("voltage").innerText    = data.voltage.toFixed(1);
     document.getElementById("elapsed").innerText    = data.elapsed.toFixed(1);
     document.getElementById("avg_time").innerText   = data.avg_time.toFixed(1);
+
+    const faults = data.faults || [];
+    const tbody = document.getElementById("faultBody");
+    const card = document.getElementById("faultCard");
+    tbody.innerHTML = "";
+    if (faults.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3" class="text-muted text-center">No active faults</td></tr>';
+        card.classList.remove("border-danger");
+        card.querySelector(".card-header").classList.replace("bg-danger", "bg-secondary");
+    } else {
+        card.classList.add("border-danger");
+        card.querySelector(".card-header").classList.replace("bg-secondary", "bg-danger");
+        for (const f of faults) {
+            const rowClass = f.severity === "HIGH" ? "table-danger" : f.severity === "MEDIUM" ? "table-warning" : "";
+            tbody.innerHTML += `<tr class="${rowClass}"><td><code>${f.code}</code></td><td>${f.severity}</td><td>${f.description}</td></tr>`;
+        }
+    }
 
 }, 1000);
 </script>

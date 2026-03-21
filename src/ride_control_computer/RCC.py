@@ -329,6 +329,18 @@ class RCC:
     def getTelemetryLogger(self):
         return self.__telemetryLogger
 
+    def getActiveFaults(self) -> list[dict]:
+        """Returns currently active faults as serializable dicts for the webserver."""
+        result = []
+        for f in self.__faultMonitor.getActiveFaults():
+            desc = f.description() if callable(f.description) else f.description
+            result.append({
+                "code": f.code,
+                "severity": f.severity.name,
+                "description": desc,
+            })
+        return result
+
     # =========================================================================
     #                           CONTROL PANEL CALLBACKS
     # =========================================================================
