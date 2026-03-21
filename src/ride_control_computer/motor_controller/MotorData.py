@@ -8,4 +8,4 @@ def getSpeeds():
     return speeds
 
 def getAverageSpeed():
-    return fmean(speeds)
+    return fmean(speeds) if speeds else 0
