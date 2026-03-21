@@ -23,7 +23,7 @@ from ride_control_computer.motor_controller.MotorData import getAverageSpeed
 LOG_FORMAT = "%(asctime)s %(levelname)s [%(name)s]: %(message)s"
 ts = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 # make logs folder if it doesn't exist
-log_dir = Path(__file__).resolve().parent.parent.parent / "logs"
+log_dir = Path("/home/trec/logs")
 log_dir.mkdir(parents=True, exist_ok=True)
 LOG_FILE = log_dir / f"RCC_Log_{ts}.log"
 logging.basicConfig(
