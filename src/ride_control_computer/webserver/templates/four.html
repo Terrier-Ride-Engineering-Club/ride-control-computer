@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card shadow">
+    <div class="card-body">
+
+        <h3>Telemetry Comparison</h3>
+
+        <p>Elapsed Time: {{ elapsed }}</p>
+        <p>Ride Count: {{ count }}</p>
+
+        <table class="table table-bordered mt-3">
+            <thead class="table-dark">
+                <tr>
+                    <th></th>
+                    <th>Current</th>
+                    <th>Average</th>
+                    <th>Difference</th>
+                </tr>
+            </thead>
+            <tbody>
+
+                <!-- Positions -->
+                <tr>
+                    <td>Motor 1 Position</td>
+                    <td id="m1_pos">{{ m1_pos }}</td>
+                    <td id="avg_m1_pos">{{ avg_m1_pos }}</td>
+                    <td id="diff_m1_pos">{{ diff_m1_pos }}</td>
+                </tr>
+                <tr>
+                    <td>Motor 2 Position</td>
+                    <td id ="m2_pos">{{ m2_pos }}</td>
+                    <td id ="avg_m2_pos">{{ avg_m2_pos }}</td>
+                    <td id ="diff_m2_pos">{{ diff_m2_pos }}</td>
+                </tr>
+
+                <!-- Velocity -->
+                <tr>
+                    <td>Motor 1 Velocity</td>
+                    <td id ="m1_vel">{{ m1_vel }}</td>
+                    <td id ="avg_m1_vel">{{ avg_m1_vel }}</td>
+                    <td id ="diff_m1_vel">{{ diff_m1_vel }}</td>
+                </tr>
+                <tr>
+                    <td>Motor 2 Velocity</td>
+                    <td id ="m2_vel">{{ m2_vel }}</td>
+                    <td id ="avg_m2_vel">{{ avg_m2_vel }}</td>
+                    <td id ="diff_m2_vel">{{ diff_m2_vel }}</td>
+                </tr>
+
+                <!-- Current -->
+                <tr>
+                    <td>Motor 1 Current</td>
+                    <td id ="m1_current">{{ m1_current }}</td>
+                    <td id ="avg_m1_cur">{{ avg_m1_cur }}</td>
+                    <td id ="diff_m1_cur">{{ diff_m1_cur }}</td>
+                </tr>
+                <tr>
+                    <td>Motor 2 Current</td>
+                    <td id ="m2_current">{{ m2_current }}</td>
+                    <td id ="avg_m2_cur">{{ avg_m2_cur }}</td>
+                    <td id ="diff_m2_cur">{{ diff_m2_cur }}</td>
+                </tr>
+
+                <!-- Voltage -->
+                <tr>
+                    <td>Bus Voltage</td>
+                    <td id ="voltage">{{ voltage }}</td>
+                    <td id ="avg_vol">{{ avg_vol }}</td>
+                    <td id ="diff_vol">{{ diff_vol }}</td>
+                </tr>
+
+                <!-- Temperature -->
+                <tr>
+                    <td>Motor 1 Temperature</td>
+                    <td id ="m1_temp">{{ m1_temp }}</td>
+                    <td id ="avg_m1_temp">{{ avg_m1_temp }}</td>
+                    <td id ="diff_m1_temp">{{ diff_m1_temp }}</td>
+                </tr>
+                <tr>
+                    <td>Motor 2 Temperature</td>
+                    <td id ="m2_temp">{{ m2_temp }}</td>
+                    <td id ="avg_m2_temp">{{ avg_m2_temp }}</td>
+                    <td id ="diff_m2_temp">{{ diff_m2_temp }}</td>
+                </tr>
+
+            </tbody>
+        </table>
+
+    </div>
+</div>
+<script>
+setInterval(async () => {
+    const response = await fetch("/four-data");
+    const data = await response.json();
+
+    for (const key in data) {
+        const element = document.getElementById(key);
+        if (element) {
+            element.innerText = data[key].toFixed
+                ? data[key].toFixed(2)
+                : data[key];
+        }
+    }
+}, 1000);
+</script>
+{% endblock %}

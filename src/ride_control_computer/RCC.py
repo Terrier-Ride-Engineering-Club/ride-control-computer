@@ -5,6 +5,7 @@ import logging
 import threading
 import time
 from enum import Enum
+from idlelib.debugobj_r import remote_object_tree_item
 
 from ride_control_computer.fault_monitor import Fault, FaultMonitor, FaultSeverity
 from ride_control_computer.motor_controller.mc_faults import registerMotorControllerFaults
@@ -16,6 +17,7 @@ from ride_control_computer.ride_sequencer import RideSequencer
 from ride_control_computer.theming_controller.ThemingController import ThemingController
 from ride_control_computer.webserver.WebserverController import WebserverController
 from ride_control_computer.control_panel.ControlPanel import ControlPanel, MomentaryButtonState, MomentarySwitchState, SustainedSwitchState
+from ride_control_computer.RideTelemetry import RideTelemetryLogger
 
 logger = logging.getLogger(__name__)
 
@@ -112,6 +114,8 @@ class RCC:
         self.__loopTimer = LoopTimer()
         self.__rideTimer = RideTimer()
 
+        self.__telemetryLogger = RideTelemetryLogger()
+
         # Map control panel callbacks
         controlPanel.addDispatchCallback(self.__onDispatch)
         controlPanel.addResetCallback(self.__onReset)
@@ -120,6 +124,9 @@ class RCC:
         controlPanel.addPowerSwitchCallback(self.__onPowerSwitch)
         controlPanel.addMaintenanceJogSwitchCallback(self.__onMaintenanceJogSwitch)
 
+    def set_webserver(self,webserverController: WebserverController):
+        """sets the webserver controller that will be used"""
+        self.__webserverController = webserverController
     # =========================================================================
     #                           LIFECYCLE
     # =========================================================================
@@ -311,6 +318,17 @@ class RCC:
     def getRideTimingData(self) -> RideTimingData:
         """Returns the ride timing data object. Used by webserver."""
         return self.__rideTimer.data
+
+    def getCurrentRideElapsed(self) -> float:
+        """Returns the current ride elapsed time. Used by webserver."""
+        return self.__rideTimer.data.getCurrentRideElapsed()
+
+    def getAverageRideDuration(self) -> float:
+        """Returns the average ride elapsed time. Used by webserver."""
+        return self.__rideTimer.data.getAverageRideDuration()
+
+    def getTelemetryLogger(self):
+        return self.__telemetryLogger
 
     # =========================================================================
     #                           CONTROL PANEL CALLBACKS

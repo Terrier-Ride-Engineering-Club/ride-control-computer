@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card shadow text-center">
+    <div class="card-body">
+
+        <h3>Theming Control</h3>
+
+        <p class="mt-3">
+            Current Status:
+            <span class="badge bg-primary">{{ status }}</span>
+        </p>
+
+        <div class="mt-4">
+            <form action="/start-theming" method="post" class="d-inline">
+                <button class="btn btn-success">Start Theming</button>
+            </form>
+
+            <form action="/stop-theming" method="post" class="d-inline">
+                <button class="btn btn-danger">Stop Theming</button>
+            </form>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

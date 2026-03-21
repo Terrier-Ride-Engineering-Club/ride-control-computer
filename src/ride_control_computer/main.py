@@ -4,14 +4,21 @@
 import argparse
 import logging
 import signal
+import time
 from datetime import datetime
 from pathlib import Path
 
 from ride_control_computer.RCC import RCC
 from ride_control_computer.control_panel.MockControlPanel import MockControlPanel
 from ride_control_computer.motor_controller.MockMotorController import MockMotorController
+from ride_control_computer.motor_controller.MotorData import getAverageSpeed
+from ride_control_computer.motor_controller.RoboClawSerialMC import RoboClawSerialMotorController
+from ride_control_computer.motor_controller.RoboClaw import RoboClaw
 from ride_control_computer.theming_controller.MockThemeingController import MockThemingController
 from ride_control_computer.webserver.MockWebserverController import MockWebserverController
+from ride_control_computer.RideTimer import RideTimingData
+from ride_control_computer.motor_controller.MotorData import getAverageSpeed
+
 # SETUP LOGGING
 LOG_FORMAT = "%(asctime)s %(levelname)s [%(name)s]: %(message)s"
 ts = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -38,7 +45,7 @@ def main():
     parser.add_argument(
         "--web-panel",
         action="store_true",
-        help="Use WebControlPanel (browser UI) instead of the physical RCP hardware"
+        help="Use WebControlPanel (browser UI) instead of the physical RCP control hardware"
     )
     args = parser.parse_args()
 
@@ -83,10 +90,16 @@ def main():
         getState=mc.getState,
         startTheming=tc.startShow,
         stopTheming=tc.stopShow,
-        themeStatus=lambda: tc.status
-    )
+        themeStatus=tc.getStatus,
+        getPositions=mc.getMotorPositions,
+        getAverageSpeed=getAverageSpeed,
+        getVoltage=mc.getVoltage,
+        getTemperatures=mc.getTemperatures,
+        getCurrents=mc.getMotorCurrents
+        )
 
     rideControlComputer = RCC(mc, cp, tc, wc, watchdogPort=WATCHDOG_PORT)
+    wc.set_rcc(rideControlComputer)
 
     def _shutdown(sig, frame):
         rideControlComputer.shutdown()
