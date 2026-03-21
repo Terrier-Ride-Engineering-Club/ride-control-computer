@@ -4,6 +4,27 @@ from ride_control_computer.fault_monitor import Fault, FaultMonitor, FaultSeveri
 from ride_control_computer.motor_controller.MotorController import MotorController
 
 
+
+# RoboClaw error bits (raw status register, command 90).
+# Only these bits represent true hardware errors worth triggering an E-Stop.
+# Warning bits (0xFFFF0000) such as Reset Warning (0x20000000) are intentionally
+# excluded — they are transient and expected at startup or after a reset.
+_MC_ERROR_BITS = (
+    0x00000002  # Temperature Error
+    | 0x00000004  # Temperature 2 Error
+    | 0x00000010  # Logic Voltage High Error
+    | 0x00000020  # Logic Voltage Low Error
+    | 0x00000040  # Motor 1 Fault Error
+    | 0x00000080  # Motor 2 Fault Error
+    | 0x00000100  # Motor 1 Speed Error
+    | 0x00000200  # Motor 2 Speed Error
+    | 0x00000400  # Motor 1 Position Error
+    | 0x00000800  # Motor 2 Position Error
+    | 0x00001000  # Motor Current 1 Error
+    | 0x00002000  # Motor Current 2 Error
+)
+
+
 def registerMotorControllerFaults(
     monitor: FaultMonitor,
     mc: MotorController,
@@ -32,7 +53,7 @@ def registerMotorControllerFaults(
         code="MC_STATUS_ABNORMAL",
         severity=FaultSeverity.HIGH,
         description=lambda: f"Motor controller reported abnormal status: {mc.getControllerStatus()}",
-        condition=lambda: mc.getControllerStatus() not in ("Normal", "E-Stop"),
+        condition=lambda: bool(mc.getRawControllerStatus() & _MC_ERROR_BITS),
     ))
     monitor.register(Fault(
         code="MC_UNEXPECTED_MOTION",
