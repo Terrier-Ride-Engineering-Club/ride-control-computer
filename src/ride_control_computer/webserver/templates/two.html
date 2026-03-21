@@ -1,32 +1,133 @@
 {% extends "base.html" %}
-
 {% block content %}
-<div class="card shadow">
+
+{% set rcc_colors = {
+    'IDLE': 'success', 'RUNNING': 'primary', 'STOPPING': 'warning',
+    'RESETTING': 'warning', 'ESTOP': 'danger', 'FAULT': 'danger',
+    'MAINTENANCE': 'info', 'OFF': 'secondary'
+} %}
+{% set mc_colors = {
+    'IDLE': 'success', 'RUNNING': 'primary', 'DISABLED': 'secondary', 'ERROR': 'danger'
+} %}
+
+<!-- ===== STATUS BADGES ===== -->
+<div class="card shadow mb-4">
+    <div class="card-body d-flex gap-3 align-items-center flex-wrap">
+        <h5 class="mb-0 me-2">System Status</h5>
+        <span id="rcc-badge" class="badge bg-{{ rcc_colors.get(rcc_state, 'secondary') }} fs-6">RCC: {{ rcc_state }}</span>
+        <span id="mc-badge"  class="badge bg-{{ mc_colors.get(mc_state, 'secondary') }} fs-6">MC: {{ mc_state }}</span>
+    </div>
+</div>
+
+<!-- ===== MOTOR DATA TABLE ===== -->
+<div class="card shadow mb-4">
     <div class="card-body">
-
-        <h3 class="card-title">Motor Data</h3>
-
-        <table class="table table-striped table-bordered mt-3">
+        <h5 class="card-title">Motor Data</h5>
+        <table class="table table-bordered table-sm mb-0">
             <thead class="table-dark">
                 <tr>
-                    <th>Label</th>
-                    <th>Time</th>
-                    <th>Speed</th>
-                    <th>Position</th>
+                    <th>Parameter</th>
+                    <th>Motor 1</th>
+                    <th>Motor 2</th>
                 </tr>
             </thead>
             <tbody>
-                {% for row in data %}
                 <tr>
-                    <td>{{ row.data }}</td>
-                    <td>{{ row.time }}</td>
-                    <td>{{ row.speed }}</td>
-                    <td>{{ row.position }}</td>
+                    <td>Speed</td>
+                    <td id="m1_speed">{{ "%.2f"|format(speeds[0]) }}</td>
+                    <td id="m2_speed">{{ "%.2f"|format(speeds[1]) }}</td>
                 </tr>
-                {% endfor %}
+                <tr>
+                    <td>Position (mm)</td>
+                    <td id="m1_pos">{{ positions[0] }}</td>
+                    <td id="m2_pos">{{ positions[1] }}</td>
+                </tr>
+                <tr>
+                    <td>Temperature (°C)</td>
+                    <td id="m1_temp">{{ temps[0] }}</td>
+                    <td id="m2_temp">{{ temps[1] }}</td>
+                </tr>
+                <tr>
+                    <td>Current (A)</td>
+                    <td id="m1_current">{{ "%.2f"|format(currents[0]) }}</td>
+                    <td id="m2_current">{{ "%.2f"|format(currents[1]) }}</td>
+                </tr>
             </tbody>
         </table>
-
     </div>
 </div>
+
+<!-- ===== ELECTRICAL + TIMING ===== -->
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card shadow h-100">
+            <div class="card-body">
+                <h5 class="card-title">Electrical</h5>
+                <p class="mb-0"><strong>Bus Voltage:</strong> <span id="voltage">{{ "%.1f"|format(voltage) }}</span> V</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-8">
+        <div class="card shadow h-100">
+            <div class="card-body">
+                <h5 class="card-title">Ride Timing</h5>
+                <p class="mb-1"><strong>Current Elapsed:</strong> <span id="elapsed">{{ "%.1f"|format(elapsed) }}</span>s</p>
+                <p class="mb-0"><strong>Avg Ride Time:</strong> <span id="avg_time">{{ "%.1f"|format(avg_time) }}</span>s</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== CONSOLE ===== -->
+{% if console %}
+<div class="card shadow">
+    <div class="card-body">
+        <h5 class="card-title">Console</h5>
+        <div id="console"
+             style="height: 200px; overflow-y: auto; background: #111; color: #0f0;
+                    padding: 10px; font-family: monospace; font-size: 0.8rem;">
+            {{ console }}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<script>
+const rccColors = {
+    'IDLE': 'success', 'RUNNING': 'primary', 'STOPPING': 'warning',
+    'RESETTING': 'warning', 'ESTOP': 'danger', 'FAULT': 'danger',
+    'MAINTENANCE': 'info', 'OFF': 'secondary'
+};
+const mcColors = {
+    'IDLE': 'success', 'RUNNING': 'primary', 'DISABLED': 'secondary', 'ERROR': 'danger'
+};
+const allColors = ['success', 'primary', 'warning', 'danger', 'info', 'secondary'];
+
+function setBadge(el, label, val, colorMap) {
+    allColors.forEach(c => el.classList.remove('bg-' + c));
+    el.classList.add('bg-' + (colorMap[val] || 'secondary'));
+    el.innerText = label + ': ' + val;
+}
+
+setInterval(async () => {
+    const data = await fetch("/two-data").then(r => r.json());
+
+    setBadge(document.getElementById("rcc-badge"), "RCC", data.rcc_state, rccColors);
+    setBadge(document.getElementById("mc-badge"),  "MC",  data.mc_state,  mcColors);
+
+    document.getElementById("m1_speed").innerText   = data.m1_speed.toFixed(2);
+    document.getElementById("m2_speed").innerText   = data.m2_speed.toFixed(2);
+    document.getElementById("m1_pos").innerText     = data.m1_pos;
+    document.getElementById("m2_pos").innerText     = data.m2_pos;
+    document.getElementById("m1_temp").innerText    = data.m1_temp;
+    document.getElementById("m2_temp").innerText    = data.m2_temp;
+    document.getElementById("m1_current").innerText = data.m1_current.toFixed(2);
+    document.getElementById("m2_current").innerText = data.m2_current.toFixed(2);
+    document.getElementById("voltage").innerText    = data.voltage.toFixed(1);
+    document.getElementById("elapsed").innerText    = data.elapsed.toFixed(1);
+    document.getElementById("avg_time").innerText   = data.avg_time.toFixed(1);
+
+}, 1000);
+</script>
+
 {% endblock %}
