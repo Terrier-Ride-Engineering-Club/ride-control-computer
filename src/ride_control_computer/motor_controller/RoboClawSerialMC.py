@@ -306,6 +306,9 @@ class RoboClawSerialMotorController(MotorController):
         with self._telemetryLock:
             return self._telemetry.temp1 if sensor == 1 else self._telemetry.temp2
 
+    def getTemperatures(self) -> tuple[float, float]:
+        return self.getTemperature(1), self.getTemperature(2)
+
     def getControllerStatus(self) -> str:
         with self._telemetryLock:
             return self._telemetry.status
