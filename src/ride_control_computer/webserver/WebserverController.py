@@ -32,9 +32,13 @@ class WebserverController(ABC):
         self.getVoltage = getVoltage
         self.getTemperatures = getTemperatures
         self.rcc = None
+        self._panel = None
 
-    def set_rcc(self,rcc):
+    def set_rcc(self, rcc):
         self.rcc = rcc
+
+    def set_panel(self, cp) -> None:
+        self._panel = cp
 
     def getElapsedTime(self):
         return self.rcc.getCurrentRideElapsed()

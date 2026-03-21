@@ -1,4 +1,5 @@
 from ride_control_computer.webserver.WebserverController import WebserverController
+from ride_control_computer.control_panel.ControlPanel import MomentaryButtonState, MomentarySwitchState, SustainedSwitchState
 from flask import *
 from math import inf
 from waitress import serve
@@ -250,5 +251,78 @@ class MockWebserverController(WebserverController):
                 return {}
 
             return jsonify(data)
+
+        # ── Web Control Panel ──────────────────────────────────────────────────
+
+        @self.app.route('/panel')
+        def panel():
+            return render_template("panel.html", panel_enabled=(self._panel is not None))
+
+        @self.app.route('/api/panel/state')
+        def panelState():
+            if not self._panel:
+                return jsonify({"error": "Panel not enabled"}), 503
+            from ride_control_computer.RCC import RCCState
+            rcc_state_obj = self.rcc.getState() if self.rcc else None
+            name = rcc_state_obj.name if rcc_state_obj else "UNKNOWN"
+            return jsonify({
+                "rcc_state": name,
+                "has_active_faults": False,
+                "indicators": {
+                    "dispatch": "blink"      if rcc_state_obj == RCCState.IDLE     else "off",
+                    "reset":    "blink"      if rcc_state_obj == RCCState.ESTOP    else "off",
+                    "stop":     "blink_fast" if rcc_state_obj == RCCState.STOPPING else "off",
+                },
+            })
+
+        @self.app.route('/api/panel/button/<name>', methods=['POST'])
+        def panelButton(name):
+            if not self._panel:
+                return jsonify({"error": "Panel not enabled"}), 503
+            data = request.get_json(silent=True) or {}
+            pressed = data.get("pressed", True)
+            btnState = MomentaryButtonState.PRESSED if pressed else MomentaryButtonState.RELEASED
+            dispatchers = {
+                "dispatch": self._panel._enqueueDispatch,
+                "reset":    self._panel._enqueueReset,
+                "stop":     self._panel._enqueueStop,
+                "estop":    self._panel._enqueueEstop,
+            }
+            if name not in dispatchers:
+                return jsonify({"error": f"Unknown button: {name}"}), 400
+            dispatchers[name](btnState)
+            return jsonify({"ok": True})
+
+        @self.app.route('/api/panel/power', methods=['POST'])
+        def panelPower():
+            if not self._panel:
+                return jsonify({"error": "Panel not enabled"}), 503
+            data = request.get_json(silent=True) or {}
+            position = data.get("position", "")
+            mapping = {
+                "on":          SustainedSwitchState.ON,
+                "off":         SustainedSwitchState.OFF,
+                "maintenance": SustainedSwitchState.MAINTENANCE,
+            }
+            if position not in mapping:
+                return jsonify({"error": f"Unknown position: {position}"}), 400
+            self._panel._enqueueMaintenanceSwitch(mapping[position])
+            return jsonify({"ok": True})
+
+        @self.app.route('/api/panel/jog', methods=['POST'])
+        def panelJog():
+            if not self._panel:
+                return jsonify({"error": "Panel not enabled"}), 503
+            data = request.get_json(silent=True) or {}
+            direction = data.get("direction", "neutral")
+            mapping = {
+                "up":      MomentarySwitchState.UP,
+                "neutral": MomentarySwitchState.NEUTRAL,
+                "down":    MomentarySwitchState.DOWN,
+            }
+            if direction not in mapping:
+                return jsonify({"error": f"Unknown direction: {direction}"}), 400
+            self._panel._enqueueMaintenanceJogSwitch(mapping[direction])
+            return jsonify({"ok": True})
 
         serve(self.app, host="127.0.0.1")

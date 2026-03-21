@@ -76,9 +76,9 @@ def main():
 
     if args.web_panel:
         logger = logging.getLogger(__name__)
-        logger.info("Control panel: WEB (http://0.0.0.0:5001)")
-        from ride_control_computer.control_panel.WebControlPanel import WebControlPanel
-        cp = WebControlPanel()
+        logger.info("Control panel: WEB PANEL (integrated on main webserver /panel)")
+        from ride_control_computer.control_panel.MockControlPanel import PassiveControlPanel
+        cp = PassiveControlPanel()
     elif args.hardware:
         from ride_control_computer.control_panel.HardwareControlPanel import HardwareControlPanel
         cp = HardwareControlPanel()
@@ -100,6 +100,7 @@ def main():
 
     rideControlComputer = RCC(mc, cp, tc, wc, watchdogPort=WATCHDOG_PORT)
     wc.set_rcc(rideControlComputer)
+    wc.set_panel(cp)
 
     def _shutdown(sig, frame):
         rideControlComputer.shutdown()
