@@ -332,7 +332,7 @@ class RCC:
     def getActiveFaults(self) -> list[dict]:
         """Returns currently active faults as serializable dicts for the webserver."""
         result = []
-        for f in self.__faultMonitor.getActiveFaults():
+        for f in self.__faultMonitor.peekActiveFaults():
             desc = f.description() if callable(f.description) else f.description
             result.append({
                 "code": f.code,

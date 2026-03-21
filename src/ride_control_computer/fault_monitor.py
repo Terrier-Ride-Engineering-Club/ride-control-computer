@@ -85,3 +85,17 @@ class FaultMonitor:
     def getActiveFaults(self) -> list[Fault]:
         """Returns all currently active faults."""
         return [f for f in self._faults if f.active]
+
+    def peekActiveFaults(self) -> list[Fault]:
+        """
+        Check current fault conditions live without updating state or logging.
+        Safe to call from any thread at any time — use for display/monitoring only.
+        """
+        result = []
+        for fault in self._faults:
+            try:
+                if fault.condition():
+                    result.append(fault)
+            except Exception:
+                result.append(fault)
+        return result
