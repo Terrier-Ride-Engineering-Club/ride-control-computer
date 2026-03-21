@@ -78,9 +78,15 @@ class ControlPanel(ABC):
         while not self.__callbackQueue.empty():
             try:
                 callback = self.__callbackQueue.get_nowait()
-                callback()
             except Empty:
                 break
+            try:
+                callback()
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).error(
+                    f"Unhandled exception in control panel callback {callback}: {e}", exc_info=True
+                )
             
     # Callback adders
     def addDispatchCallback(self, callback: Callable[[MomentaryButtonState], None]) -> None:

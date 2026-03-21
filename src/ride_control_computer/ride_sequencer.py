@@ -125,5 +125,10 @@ class RideSequencer:
         elif segment.completionMode == "duration":
             return elapsed >= segment.durationS
         else:
-            logger.error(f"Unknown completionMode '{segment.completionMode}' — treating as complete")
-            return True
+            logger.error(
+                f"Unknown completionMode '{segment.completionMode}' in segment '{segment.name}' — aborting ride"
+            )
+            self.abort()
+            if self._onTimeout:
+                self._onTimeout()
+            return False

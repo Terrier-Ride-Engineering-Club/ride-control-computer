@@ -9,6 +9,8 @@ from dataclasses import dataclass, field
 
 logger = logging.getLogger(__name__)
 
+VALID_COMPLETION_MODES = {"waitForBoth", "waitForEither", "duration"}
+
 
 @dataclass
 class MotorCommand:
@@ -44,9 +46,15 @@ class ProfileSegment:
     def fromDict(cls, d: dict) -> ProfileSegment:
         motor1 = MotorCommand.fromDict(d["motor1"]) if "motor1" in d else None
         motor2 = MotorCommand.fromDict(d["motor2"]) if "motor2" in d else None
+        completionMode = d["completionMode"]
+        if completionMode not in VALID_COMPLETION_MODES:
+            raise ValueError(
+                f"Invalid completionMode '{completionMode}' in segment '{d.get('name', '?')}'. "
+                f"Must be one of: {sorted(VALID_COMPLETION_MODES)}"
+            )
         return cls(
             name=d["name"],
-            completionMode=d["completionMode"],
+            completionMode=completionMode,
             timeoutS=float(d.get("timeoutS", 30.0)),
             motor1=motor1,
             motor2=motor2,
