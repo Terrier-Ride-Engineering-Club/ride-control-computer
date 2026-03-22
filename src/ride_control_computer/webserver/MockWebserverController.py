@@ -6,8 +6,8 @@ from waitress import serve
 
 class MockWebserverController(WebserverController):
 
-    def __init__(self, getSpeeds, getState, startTheming, stopTheming, themeStatus, getPositions, getAverageSpeed, getCurrents, getVoltage, getTemperatures, isTelemetryStale=lambda: True):
-        super().__init__(getSpeeds, getState, startTheming, stopTheming, themeStatus, getPositions, getAverageSpeed, getCurrents, getVoltage, getTemperatures, isTelemetryStale)
+    def __init__(self, getSpeeds, getState, startTheming, stopTheming, themeStatus, getPositions, getCurrents, getVoltage, getTemperatures, isTelemetryStale=lambda: True):
+        super().__init__(getSpeeds, getState, startTheming, stopTheming, themeStatus, getPositions, getCurrents, getVoltage, getTemperatures, isTelemetryStale)
 
     def _compute_four_data(self):
         if self.rcc is None:

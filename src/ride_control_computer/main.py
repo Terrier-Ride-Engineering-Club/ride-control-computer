@@ -11,13 +11,10 @@ from pathlib import Path
 from ride_control_computer.RCC import RCC
 from ride_control_computer.control_panel.MockControlPanel import MockControlPanel
 from ride_control_computer.motor_controller.MockMotorController import MockMotorController
-from ride_control_computer.motor_controller.MotorData import getAverageSpeed
 from ride_control_computer.motor_controller.RoboClawSerialMC import RoboClawSerialMotorController
 from ride_control_computer.motor_controller.RoboClaw import RoboClaw
 from ride_control_computer.theming_controller.MockThemeingController import MockThemingController
 from ride_control_computer.webserver.MockWebserverController import MockWebserverController
-from ride_control_computer.RideTimer import RideTimingData
-from ride_control_computer.motor_controller.MotorData import getAverageSpeed
 
 # SETUP LOGGING
 LOG_FORMAT = "%(asctime)s %(levelname)s [%(name)s]: %(message)s"
@@ -97,7 +94,6 @@ def main():
         stopTheming=tc.stopShow,
         themeStatus=tc.getStatus,
         getPositions=mc.getMotorPositions,
-        getAverageSpeed=getAverageSpeed,
         getVoltage=mc.getVoltage,
         getTemperatures=mc.getTemperatures,
         getCurrents=mc.getMotorCurrents,

@@ -1,5 +1,4 @@
 from ride_control_computer.motor_controller.MotorController import MotorControllerState, MotorController
-from ride_control_computer.motor_controller.MotorData import addSpeed,getSpeeds
 import random
 import time
 import logging
@@ -76,10 +75,7 @@ class MockMotorController(MotorController):
         return random.random() * 100, random.random() * 100
 
     def getMotorSpeeds(self) -> tuple[float, float]:
-        speeds = random.random()*100, random.random()*100
-        self.recordSpeed(speeds[0])
-        self.recordSpeed(speeds[1])
-        return speeds
+        return random.random()*100, random.random()*100
 
     def getMotorPosition(self, motor: int) -> int:
         return 0
@@ -110,10 +106,6 @@ class MockMotorController(MotorController):
 
     def getLastMotorCommand(self, motor: int) -> tuple[int, int, int, int] | None:
         return None
-
-    def recordSpeed(self,speed):
-        addSpeed(speed)
-
 
     # =========================================================================
     #                           STATE

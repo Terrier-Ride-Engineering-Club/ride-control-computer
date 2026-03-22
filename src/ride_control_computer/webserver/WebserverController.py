@@ -2,7 +2,6 @@ from abc import ABC, abstractmethod
 from flask import Flask, render_template_string
 from typing import Callable
 
-from ride_control_computer.RideTimer import RideTimingData
 from ride_control_computer.motor_controller.MotorController import MotorControllerState
 
 class WebserverController(ABC):
@@ -15,7 +14,6 @@ class WebserverController(ABC):
                  stopTheming: Callable[[], None],
                  themeStatus: Callable[[], str],
                  getPositions: Callable[[], tuple[int, int]],
-                 getAverageSpeed: Callable[[], float],
                  getCurrents: Callable[[], tuple[float, float]],
                  getVoltage: Callable[[], float],
                  getTemperatures: Callable[[], tuple[float, float]],
@@ -29,7 +27,6 @@ class WebserverController(ABC):
         self.stopTheming = stopTheming
         self.themeStatus = themeStatus
         self.getPositions = getPositions
-        self.getAverageSpeed = getAverageSpeed
         self.getCurrents = getCurrents
         self.getVoltage = getVoltage
         self.getTemperatures = getTemperatures

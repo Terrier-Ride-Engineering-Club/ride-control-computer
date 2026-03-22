@@ -96,6 +96,7 @@ class FaultMonitor:
             try:
                 if fault.condition():
                     result.append(fault)
-            except Exception:
+            except Exception as e:
+                logger.error(f"Exception evaluating fault condition [{fault.code}]: {e}", exc_info=True)
                 result.append(fault)
         return result

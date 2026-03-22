@@ -149,7 +149,8 @@ class RCC:
         try:
             self.__motorController.start()
         except Exception as e:
-            logger.error(f"Motor controller failed to start: {e} — running in degraded mode")
+            logger.critical(f"Motor controller failed to start: {e} — entering FAULT state")
+            self.__setState(RCCState.FAULT)
 
         if self.__watchdog is not None:
             self.__watchdog.start()
@@ -249,9 +250,19 @@ class RCC:
 
     def __monitorSafety(self):
         """Evaluate all fault conditions; latch E-Stop on any HIGH fault."""
-        if self.__state in (RCCState.ESTOP, RCCState.RESETTING, RCCState.FAULT, RCCState.OFF):
+        if self.__state in (RCCState.RESETTING, RCCState.FAULT, RCCState.OFF):
             return
+
         newlyActive = self.__faultMonitor.evaluate()
+
+        if self.__state == RCCState.ESTOP:
+            # Already in E-Stop — keep fault states current for display, but don't
+            # overwrite __lastEstopFaults or re-trigger a state transition.
+            if newlyActive:
+                codes = ", ".join(f.code for f in newlyActive)
+                logger.warning(f"Additional fault(s) became active during E-Stop: {codes}")
+            return
+
         highFaults = [f for f in newlyActive if f.severity == FaultSeverity.HIGH]
         if highFaults:
             codes = ", ".join(f.code for f in highFaults)

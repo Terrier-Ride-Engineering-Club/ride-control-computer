@@ -402,9 +402,20 @@ class RoboClawSerialMotorController(MotorController):
                 self._setState(MotorControllerState.DISABLED)
                 with self._telemetryLock:
                     self._telemetry.lastUpdate = 0.0   # Force isTelemetryStale() → True immediately
+                # Reset command state to STOP so stale drive commands don't
+                # re-execute when the connection is re-established.
+                with self._commandLock:
+                    self._commandType  = _CommandType.STOP
+                    self._commandDecel = self.HALT_DECELERATION
+                    self._commandDrive.clear()
 
             except Exception as e:
-                logger.error(f"Control loop error: {e}")
+                logger.error(f"Unexpected control loop error: {e}", exc_info=True)
+                # Defensively reset to STOP — we don't know what state the command left things in.
+                with self._commandLock:
+                    self._commandType  = _CommandType.STOP
+                    self._commandDecel = self.HALT_DECELERATION
+                    self._commandDrive.clear()
 
             elapsed = time.monotonic() - now
             sleepTime = loopInterval - elapsed
