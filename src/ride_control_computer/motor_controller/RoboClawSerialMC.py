@@ -84,7 +84,6 @@ class RoboClawSerialMotorController(MotorController):
         self._commandLock = Lock()
         self._commandType: _CommandType   = _CommandType.STOP
         self._commandDecel: int           = self.STOP_DECELERATION
-        self._commandJogMotor: int        = 0
         self._commandJogDir: int          = 0
         # Per-motor drive params: motor → (position, speed, accel, decel)
         self._commandDrive: dict[int, tuple[int, int, int, int]] = {}
@@ -222,8 +221,7 @@ class RoboClawSerialMotorController(MotorController):
             return False
         with self._commandLock:
             self._commandType   = _CommandType.JOG
-            self._commandJogMotor = motorNumber
-            self._commandJogDir   = direction
+            self._commandJogDir = direction
         return True
 
     def stopMotion(self) -> None:
@@ -434,7 +432,6 @@ class RoboClawSerialMotorController(MotorController):
         with self._commandLock:
             cmdType     = self._commandType
             cmdDecel    = self._commandDecel
-            cmdJogMotor = self._commandJogMotor
             cmdJogDir   = self._commandJogDir
             cmdDrive    = dict(self._commandDrive)
 
@@ -443,8 +440,11 @@ class RoboClawSerialMotorController(MotorController):
                 self._roboClaw.set_speed_with_acceleration(motor, 0, cmdDecel)
 
         elif cmdType == _CommandType.JOG:
-            speed = self.JOG_SPEED if cmdJogDir > 0 else -self.JOG_SPEED
-            self._roboClaw.set_speed_with_acceleration(cmdJogMotor, speed, self.JOG_ACCELERATION)
+            for motor in [1, 2]:
+                atLimit = (cmdJogDir > 0 and self._limitCache[motor]["top"]) or \
+                          (cmdJogDir < 0 and self._limitCache[motor]["bottom"])
+                speed = 0 if atLimit else (self.JOG_SPEED if cmdJogDir > 0 else -self.JOG_SPEED)
+                self._roboClaw.set_speed_with_acceleration(motor, speed, self.JOG_ACCELERATION)
 
         elif cmdType == _CommandType.DRIVE:
             for motor, (pos, spd, acc, dec) in cmdDrive.items():

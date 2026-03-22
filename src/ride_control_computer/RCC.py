@@ -421,6 +421,9 @@ class RCC:
 
     def __onEstop(self, state: MomentaryButtonState) -> None:
         if state == MomentaryButtonState.PRESSED:
+            if self.__state == RCCState.OFF:
+                logger.warning("E-Stop pressed in OFF state — ignored")
+                return
             logger.warning("E-Stop button pressed — latching")
             self.__latchEstop([{
                 "code": "MANUAL_ESTOP",
@@ -438,7 +441,7 @@ class RCC:
         """
         if state == SustainedSwitchState.MAINTENANCE:
             logger.info("Key switch → MAINTENANCE")
-            if self.__state == RCCState.IDLE:
+            if self.__state == RCCState.OFF:
                 self.__setState(RCCState.MAINTENANCE)
             elif self.__state == RCCState.RUNNING:
                 logger.warning("Key switch to MAINTENANCE during RUNNING — fault")
