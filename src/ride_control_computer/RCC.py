@@ -165,6 +165,7 @@ class RCC:
             self.__controlPanel.updateIndicators(self.__state, self.__faultMonitor.hasActiveFaults())
             self.__printTelemetry()
 
+
             self.__loopTimer.tick()
             time.sleep(0.001)
 
@@ -197,12 +198,16 @@ class RCC:
         # Exit actions
         if oldState == RCCState.RUNNING:
             self.__rideTimer.endRide()
+            self.__telemetryLogger.endRide()
+
         if oldState == RCCState.RESETTING:
             self.__rideTimer.endEstop()
 
         # Entry actions
         if newState == RCCState.RUNNING:
             self.__rideTimer.startRide()
+            self.__telemetryLogger.startRide()
+
         elif newState == RCCState.ESTOP:
             self.__preEstopState = oldState
             self.__rideTimer.startEstop()

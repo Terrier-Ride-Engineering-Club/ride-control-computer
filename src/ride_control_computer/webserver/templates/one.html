@@ -27,13 +27,13 @@
         <div class="card shadow">
             <div class="card-body">
                 <h5 class="card-title text-center text-muted">Ride Position</h5>
-                <div class="d-flex justify-content-center align-items-end gap-5" style="height: 200px;">
+                <div class="d-flex justify-content-center align-items-end gap-5" style="height: 225px;">
 
                     <div class="text-center">
                         <div class="progress" style="width: 60px; height: 160px; transform: rotate(180deg);">
                             <div id="bar1" class="progress-bar bg-info" style="width: 100%; height: {{ line1 }}%;"></div>
                         </div>
-                        <div class="mt-2 fw-bold">Motor 1</div>
+                        <div class="mt-2 fw-bold">Tower 1</div>
                         <div id="m1_pos" class="text-muted small">{{ positions[0] }} mm</div>
                     </div>
 
@@ -41,7 +41,7 @@
                         <div class="progress" style="width: 60px; height: 160px; transform: rotate(180deg);">
                             <div id="bar2" class="progress-bar bg-warning" style="width: 100%; height: {{ line2 }}%;"></div>
                         </div>
-                        <div class="mt-2 fw-bold">Motor 2</div>
+                        <div class="mt-2 fw-bold">Tower 2</div>
                         <div id="m2_pos" class="text-muted small">{{ positions[1] }} mm</div>
                     </div>
 
