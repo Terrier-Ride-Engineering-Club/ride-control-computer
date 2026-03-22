@@ -177,6 +177,7 @@ class MockWebserverController(WebserverController):
             last_estop_faults = self.rcc.getLastEstopFaults() if self.rcc else []
             watchdog = self.rcc.getWatchdogStatus() if self.rcc else "DISABLED"
 
+            limits = self.getLimitSwitches()
             return render_template("two.html",
                 rcc_state=rcc_state,
                 mc_connected=mc_connected,
@@ -191,6 +192,7 @@ class MockWebserverController(WebserverController):
                 console=console_output,
                 faults=faults,
                 last_estop_faults=last_estop_faults,
+                limits=limits,
             )
 
         @self.app.route('/two-data')
