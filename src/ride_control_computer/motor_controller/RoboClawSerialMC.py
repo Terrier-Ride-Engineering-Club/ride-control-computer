@@ -14,10 +14,10 @@ from ride_control_computer.motor_controller.MotorController import MotorControll
 from ride_control_computer.motor_controller.RoboClaw import RoboClaw
 
 # --- Limit switch GPIO pins (BCM numbering) ---
-PIN_M1_TOP_LIMIT    = 12
-PIN_M1_BOTTOM_LIMIT = 16
-PIN_M2_TOP_LIMIT    = 20
-PIN_M2_BOTTOM_LIMIT = 21
+PIN_M1_TOP_LIMIT    = 20
+PIN_M1_BOTTOM_LIMIT = 21
+PIN_M2_TOP_LIMIT    = 8
+PIN_M2_BOTTOM_LIMIT = 7
 
 # --- Homing parameters ---
 HOMING_SPEED        = 300   # QPPS — slow creep toward limit switch
