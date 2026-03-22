@@ -6,8 +6,8 @@ from waitress import serve
 
 class MockWebserverController(WebserverController):
 
-    def __init__(self, getSpeeds, getState, startTheming, stopTheming, themeStatus, getPositions, getCurrents, getVoltage, getTemperatures, isTelemetryStale=lambda: True):
-        super().__init__(getSpeeds, getState, startTheming, stopTheming, themeStatus, getPositions, getCurrents, getVoltage, getTemperatures, isTelemetryStale)
+    def __init__(self, getSpeeds, getState, startTheming, stopTheming, themeStatus, getPositions, getCurrents, getVoltage, getTemperatures, isTelemetryStale=lambda: True, getLimitSwitches=lambda: {"m1_top": False, "m1_bottom": False, "m2_top": False, "m2_bottom": False}):
+        super().__init__(getSpeeds, getState, startTheming, stopTheming, themeStatus, getPositions, getCurrents, getVoltage, getTemperatures, isTelemetryStale, getLimitSwitches)
 
     def _compute_four_data(self):
         if self.rcc is None:
@@ -212,6 +212,7 @@ class MockWebserverController(WebserverController):
             faults = self.rcc.getActiveFaults() if self.rcc else []
             last_estop_faults = self.rcc.getLastEstopFaults() if self.rcc else []
             watchdog = self.rcc.getWatchdogStatus() if self.rcc else "DISABLED"
+            limits = self.getLimitSwitches()
             return jsonify({
                 "rcc_state": rcc_state,
                 "mc_connected": mc_connected,
@@ -229,6 +230,7 @@ class MockWebserverController(WebserverController):
                 "elapsed": elapsed,
                 "faults": faults,
                 "last_estop_faults": last_estop_faults,
+                "limits": limits,
             })
 
         @self.app.route("/start-theming", methods=["POST"])

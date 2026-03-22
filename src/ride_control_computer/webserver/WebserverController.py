@@ -18,6 +18,7 @@ class WebserverController(ABC):
                  getVoltage: Callable[[], float],
                  getTemperatures: Callable[[], tuple[float, float]],
                  isTelemetryStale: Callable[[], bool] = lambda: True,
+                 getLimitSwitches: Callable[[], dict] = lambda: {"m1_top": False, "m1_bottom": False, "m2_top": False, "m2_bottom": False},
                  ):
         self.app = Flask(__name__)
         self.getSpeed = getSpeeds
@@ -30,6 +31,7 @@ class WebserverController(ABC):
         self.getCurrents = getCurrents
         self.getVoltage = getVoltage
         self.getTemperatures = getTemperatures
+        self.getLimitSwitches = getLimitSwitches
         self.rcc = None
         self._panel = None
 

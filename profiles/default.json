@@ -6,7 +6,7 @@
             "name": "Lift",
             "motor1": {"type": "driveToPosition", "position": 10000, "speed": 1500, "accel": 400, "decel": 300},
             "motor2": {"type": "driveToPosition", "position": 10000, "speed": 1200, "accel": 400, "decel": 300},
-            "completionMode": "waitForBoth",
+            "completionMode": "waitForEither",
             "timeoutS": 15.0
         },
         {

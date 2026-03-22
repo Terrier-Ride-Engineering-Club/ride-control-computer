@@ -98,6 +98,12 @@ def main():
         getTemperatures=mc.getTemperatures,
         getCurrents=mc.getMotorCurrents,
         isTelemetryStale=mc.isTelemetryStale,
+        getLimitSwitches=lambda: {
+            "m1_top":    mc.isAtTopLimit(1),
+            "m1_bottom": mc.isAtBottomLimit(1),
+            "m2_top":    mc.isAtTopLimit(2),
+            "m2_bottom": mc.isAtBottomLimit(2),
+        },
         )
 
     rideControlComputer = RCC(mc, cp, tc, wc, watchdogPort=WATCHDOG_PORT)
