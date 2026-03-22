@@ -15,6 +15,17 @@
         {% set wd_color = {'OK': 'success', 'TIMEOUT': 'danger', 'PLC_ERROR': 'warning', 'DISABLED': 'secondary'} %}
         <span id="wd-badge" class="badge bg-{{ wd_color.get(watchdog, 'secondary') }} fs-6">WD: {{ watchdog }}</span>
     </div>
+    <div class="card-body pt-0 d-flex gap-2 flex-wrap align-items-center" id="mc-status-row">
+        <small class="text-muted">MC bits:</small>
+        {% if mc_status_string == 'Normal' %}
+            <span class="badge bg-success">Normal</span>
+        {% else %}
+            {% for bit in mc_status_string.split(', ') %}
+                {% set is_warning = 'Warning' in bit %}
+                <span class="badge bg-{{ 'warning text-dark' if is_warning else 'danger' }}">{{ bit }}</span>
+            {% endfor %}
+        {% endif %}
+    </div>
 </div>
 
 <!-- ===== ACTIVE FAULTS ===== -->
@@ -196,6 +207,15 @@ setInterval(async () => {
     setLimitBadge("m1_bottom_limit", lim.m1_bottom);
     setLimitBadge("m2_top_limit",    lim.m2_top);
     setLimitBadge("m2_bottom_limit", lim.m2_bottom);
+
+    const mcStatusRow = document.getElementById("mc-status-row");
+    const mcStr = data.mc_status_string || "Unknown";
+    const bits = mcStr === "Normal" ? ["Normal"] : mcStr.split(", ");
+    mcStatusRow.innerHTML = '<small class="text-muted">MC bits:</small> ' + bits.map(bit => {
+        const isWarning = bit.includes("Warning");
+        const cls = bit === "Normal" ? "bg-success" : isWarning ? "bg-warning text-dark" : "bg-danger";
+        return `<span class="badge ${cls}">${bit}</span>`;
+    }).join(" ");
 
     function renderFaultTable(bodyId, cardId, faults, emptyMsg, activeHeaderClass, inactiveHeaderClass, activeBorderClass) {
         const tbody = document.getElementById(bodyId);

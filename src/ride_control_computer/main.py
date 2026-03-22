@@ -104,6 +104,7 @@ def main():
             "m2_top":    mc.isAtTopLimit(2),
             "m2_bottom": mc.isAtBottomLimit(2),
         },
+        getMCStatusString=mc.getControllerStatus,
         )
 
     rideControlComputer = RCC(mc, cp, tc, wc, watchdogPort=WATCHDOG_PORT)

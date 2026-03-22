@@ -6,8 +6,8 @@ from waitress import serve
 
 class MockWebserverController(WebserverController):
 
-    def __init__(self, getSpeeds, getState, startTheming, stopTheming, themeStatus, getPositions, getCurrents, getVoltage, getTemperatures, isTelemetryStale=lambda: True, getLimitSwitches=lambda: {"m1_top": False, "m1_bottom": False, "m2_top": False, "m2_bottom": False}):
-        super().__init__(getSpeeds, getState, startTheming, stopTheming, themeStatus, getPositions, getCurrents, getVoltage, getTemperatures, isTelemetryStale, getLimitSwitches)
+    def __init__(self, getSpeeds, getState, startTheming, stopTheming, themeStatus, getPositions, getCurrents, getVoltage, getTemperatures, isTelemetryStale=lambda: True, getLimitSwitches=lambda: {"m1_top": False, "m1_bottom": False, "m2_top": False, "m2_bottom": False}, getMCStatusString=lambda: "Unknown"):
+        super().__init__(getSpeeds, getState, startTheming, stopTheming, themeStatus, getPositions, getCurrents, getVoltage, getTemperatures, isTelemetryStale, getLimitSwitches, getMCStatusString)
 
     def _compute_four_data(self):
         if self.rcc is None:
@@ -178,6 +178,7 @@ class MockWebserverController(WebserverController):
             watchdog = self.rcc.getWatchdogStatus() if self.rcc else "DISABLED"
 
             limits = self.getLimitSwitches()
+            mc_status_string = self.getMCStatusString()
             return render_template("two.html",
                 rcc_state=rcc_state,
                 mc_connected=mc_connected,
@@ -193,6 +194,7 @@ class MockWebserverController(WebserverController):
                 faults=faults,
                 last_estop_faults=last_estop_faults,
                 limits=limits,
+                mc_status_string=mc_status_string,
             )
 
         @self.app.route('/two-data')
@@ -215,6 +217,7 @@ class MockWebserverController(WebserverController):
             last_estop_faults = self.rcc.getLastEstopFaults() if self.rcc else []
             watchdog = self.rcc.getWatchdogStatus() if self.rcc else "DISABLED"
             limits = self.getLimitSwitches()
+            mc_status_string = self.getMCStatusString()
             return jsonify({
                 "rcc_state": rcc_state,
                 "mc_connected": mc_connected,
@@ -233,6 +236,7 @@ class MockWebserverController(WebserverController):
                 "faults": faults,
                 "last_estop_faults": last_estop_faults,
                 "limits": limits,
+                "mc_status_string": mc_status_string,
             })
 
         @self.app.route("/start-theming", methods=["POST"])
