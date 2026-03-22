@@ -165,6 +165,7 @@ class RCC:
             self.__controlPanel.updateIndicators(self.__state, self.__faultMonitor.hasActiveFaults())
             self.__printTelemetry()
 
+            self.__telemetryLogger.logSample(self.__webserverController.getElapsedTime(),self.__webserverController.getPositions(),self.__webserverController.getSpeed(),self.__webserverController.getCurrents(),self.__webserverController.getVoltage(),self.__webserverController.getTemperatures())
 
             self.__loopTimer.tick()
             time.sleep(0.001)
@@ -358,6 +359,7 @@ class RCC:
         return self.__rideTimer.data.getAverageRideDuration()
 
     def getTelemetryLogger(self):
+        print(self.__telemetryLogger.getAllRides())
         return self.__telemetryLogger
 
     def getWatchdogStatus(self) -> str:

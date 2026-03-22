@@ -106,9 +106,9 @@ class RideTelemetryLogger:
         """
         Log a telemetry snapshot for the active ride.
         """
+
         if self._currentRide is None:
             return
-
         self._currentRide.addSample(rideElapsed, positions, velocities, currents, voltage, temperatures)
 
     # --------------------------------------------------------

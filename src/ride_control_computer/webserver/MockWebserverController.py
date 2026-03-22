@@ -60,9 +60,9 @@ class MockWebserverController(WebserverController):
                 avg_m2_vel += closest.motor2Velocity
                 avg_m1_cur += closest.motor1Current
                 avg_m2_cur += closest.motor2Current
-                avg_vol += closest.busVoltage
-                avg_m1_temp += closest.motor1Temperature
-                avg_m2_temp += closest.motor2Temperature
+                avg_vol += closest.voltage
+                avg_m1_temp += closest.motor1temp
+                avg_m2_temp += closest.motor2temp
                 count += 1
 
         if count > 0:
