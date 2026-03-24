@@ -12,6 +12,48 @@
     'OFF':         'bg-secondary text-white',
 }.get(state, 'bg-secondary text-white') %}
 
+{% set rcc_colors = {
+    'IDLE': 'success', 'RUNNING': 'primary', 'STOPPING': 'warning',
+    'RESETTING': 'warning', 'ESTOP': 'danger', 'FAULT': 'danger',
+    'MAINTENANCE': 'info', 'OFF': 'secondary'
+} %}
+
+
+<!-- ===== STATUS BADGES ===== -->
+<div class="card shadow mb-4">
+    <div class="card-body d-flex gap-3 align-items-center flex-wrap">
+        <h5 class="mb-0 me-2">System Status</h5>
+        <span id="rcc-badge" class="badge bg-{{ rcc_colors.get(rcc_state, 'secondary') }} fs-6">RCC: {{ rcc_state }}</span>        <span id="mc-badge"  class="badge bg-{{ 'success' if mc_connected else 'danger' }} fs-6">MC: {{ 'CONNECTED' if mc_connected else 'DISCONNECTED' }}</span>
+        {% set wd_color = {'OK': 'success', 'TIMEOUT': 'danger', 'PLC_ERROR': 'warning', 'DISABLED': 'secondary'} %}
+        <span id="wd-badge" class="badge bg-{{ wd_color.get(watchdog, 'secondary') }} fs-6">WD: {{ watchdog }}</span>
+    </div>
+</div>
+
+<!-- ===== ACTIVE FAULTS ===== -->
+<div class="card shadow mb-3 border-danger" id="faultCard">
+    <div class="card-header bg-danger text-white fw-bold">Active Faults</div>
+    <div class="card-body p-0">
+        <table class="table table-sm table-bordered mb-0">
+            <thead class="table-dark">
+                <tr><th>Code</th><th>Severity</th><th>Description</th></tr>
+            </thead>
+            <tbody id="faultBody">
+                {% if faults %}
+                    {% for f in faults %}
+                    <tr class="{{ 'table-danger' if f.severity == 'HIGH' else 'table-warning' if f.severity == 'MEDIUM' else '' }}">
+                        <td><code>{{ f.code }}</code></td><td>{{ f.severity }}</td><td>{{ f.description }}</td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr><td colspan="3" class="text-muted text-center">No active faults</td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+
+
 <!-- ===== STATE BANNER ===== -->
 <div id="state-card" class="card shadow mb-4 {{ state_class }}">
     <div class="card-body text-center py-5">
@@ -72,26 +114,76 @@ const stateClasses = {
     'MAINTENANCE': 'bg-info text-white',
     'OFF':         'bg-secondary text-white',
 };
+
 const allStateClasses = [...new Set(Object.values(stateClasses).flatMap(c => c.split(' ')))];
+
+// RCC color map
+const rccColorMap = {
+    'IDLE': 'bg-success',
+    'RUNNING': 'bg-primary',
+    'STOPPING': 'bg-warning',
+    'RESETTING': 'bg-warning',
+    'ESTOP': 'bg-danger',
+    'FAULT': 'bg-danger',
+    'MAINTENANCE': 'bg-info',
+    'OFF': 'bg-secondary'
+};
+
+// Watchdog color map
+const wdColorMap = {
+    'OK': 'bg-success',
+    'TIMEOUT': 'bg-danger',
+    'PLC_ERROR': 'bg-warning',
+    'DISABLED': 'bg-secondary'
+};
+
+// Helper to remove all bg-* classes
+function clearBgClasses(el) {
+    el.classList.remove(
+        "bg-success","bg-primary","bg-warning",
+        "bg-danger","bg-info","bg-secondary"
+    );
+}
 
 setInterval(async () => {
     const data = await fetch("/one-data").then(r => r.json());
 
-    // State banner color
+    // ===== STATE BANNER =====
     const card = document.getElementById("state-card");
     allStateClasses.forEach(c => card.classList.remove(c));
-    (stateClasses[data.state] || 'bg-secondary text-white').split(' ').forEach(c => card.classList.add(c));
+    (stateClasses[data.state] || 'bg-secondary text-white')
+        .split(' ')
+        .forEach(c => card.classList.add(c));
 
     document.getElementById("state").innerText = data.state;
     document.getElementById("rideTime").innerText = data.rideTime.toFixed(1) + "s";
     document.getElementById("rideTimeLarge").innerText = data.rideTime.toFixed(1) + "s";
 
+    // ===== POSITION =====
     document.getElementById("m1_pos").innerText = data.m1_pos + " mm";
     document.getElementById("m2_pos").innerText = data.m2_pos + " mm";
     document.getElementById("bar1").style.height = data.line1 + "%";
     document.getElementById("bar2").style.height = data.line2 + "%";
 
+    // ===== RCC BADGE =====
+    const rccBadge = document.getElementById("rcc-badge");
+    clearBgClasses(rccBadge);
+    rccBadge.classList.add(rccColorMap[data.rcc_state] || 'bg-secondary');
+    rccBadge.innerText = "RCC: " + data.rcc_state;
+
+    // ===== MC BADGE =====
+    const mcBadge = document.getElementById("mc-badge");
+    clearBgClasses(mcBadge);
+    const mcConnected = data.mc_connected;
+    mcBadge.classList.add(mcConnected ? "bg-success" : "bg-danger");
+    mcBadge.innerText = "MC: " + (mcConnected ? "CONNECTED" : "DISCONNECTED");
+
+    // ===== WATCHDOG BADGE =====
+    const wdBadge = document.getElementById("wd-badge");
+    clearBgClasses(wdBadge);
+    wdBadge.classList.add(wdColorMap[data.watchdog] || 'bg-secondary');
+    wdBadge.innerText = "WD: " + data.watchdog;
+
 }, 500);
 </script>
-
 {% endblock %}

@@ -24,11 +24,13 @@ class MockWebserverController(WebserverController):
         currents = self.getCurrents() or (0, 0)
         voltage = self.getVoltage() or 0
         temps = self.getTemperatures() or (0, 0)
+        
 
         m1_pos, m2_pos = positions
         m1_vel, m2_vel = velocities
         m1_current, m2_current = currents
         m1_temp, m2_temp = temps
+
 
         # ----------------------------
         # Historical Telemetry
@@ -124,18 +126,26 @@ class MockWebserverController(WebserverController):
             ride_time = self.getElapsedTime() or 0
 
             raw_state = str(self.rcc.getState()) if self.rcc else ""
-            state = raw_state.split(".", 1)[1] if "." in raw_state else raw_state
+            rcc_state = raw_state.split(".", 1)[1] if "." in raw_state else raw_state
+            faults = self.rcc.getActiveFaults() if self.rcc else []
+            mc_connected = not self.isTelemetryStale()
+            watchdog = self.rcc.getWatchdogStatus() if self.rcc else "DISABLED"
+
 
             line1 = positions[0] / 2.56
             line2 = positions[1] / 2.56
 
             return render_template(
                 "one.html",
-                state=state,
+                state = rcc_state,
+                rcc_state=rcc_state,
                 positions=positions,
                 rideTime=ride_time,
+                faults = faults,
+                mc_connected = mc_connected,
                 line1=line1,
                 line2=line2,
+                watchdog=watchdog,
             )
 
         @self.app.route('/one-data')
@@ -144,15 +154,24 @@ class MockWebserverController(WebserverController):
             ride_time = self.getElapsedTime() or 0
 
             raw_state = str(self.rcc.getState()) if self.rcc else ""
-            state = raw_state.split(".", 1)[1] if "." in raw_state else raw_state
+            rcc_state = raw_state.split(".", 1)[1] if "." in raw_state else raw_state
+            faults = self.rcc.getActiveFaults() if self.rcc else []
+            mc_connected = not self.isTelemetryStale()
+            watchdog = self.rcc.getWatchdogStatus() if self.rcc else "DISABLED"
+
+
 
             return jsonify({
-                "state": state,
+                "state": rcc_state,
+                "rcc_state": rcc_state,
                 "rideTime": ride_time,
                 "m1_pos": positions[0],
                 "m2_pos": positions[1],
+                "faults": faults,
+                "mc_connected": mc_connected,
                 "line1": positions[0] / 2.56,
                 "line2": positions[1] / 2.56,
+                "watchdog": watchdog,
             })
 
 
