@@ -6,9 +6,8 @@
 
         <h3>Telemetry Comparison</h3>
 
-        <p>Elapsed Time: {{ elapsed }}</p>
+        <p>Elapsed Time: <span id="elapsed">{{ elapsed }}</span></p>
         <p>Ride Count: {{ count }}</p>
-
         <table class="table table-bordered mt-3">
             <thead class="table-dark">
                 <tr>
@@ -94,14 +93,60 @@ setInterval(async () => {
     const response = await fetch("/four-data");
     const data = await response.json();
 
+    // Update normal fields
     for (const key in data) {
-        const element = document.getElementById(key);
-        if (element) {
-            element.innerText = data[key].toFixed
-                ? data[key].toFixed(2)
-                : data[key];
-        }
+    const element = document.getElementById(key);
+    if (!element) continue;
+
+    const value = data[key];
+
+    if (typeof value === "number") {
+        element.innerText = value.toFixed(2);
+    } else {
+        element.innerText = value;
     }
-}, 1000);
+}
+    // ===== Update ride durations table =====
+    const tbody = document.getElementById("ride-duration-body");
+    if (tbody && data.ride_durations) {
+        tbody.innerHTML = "";
+
+        data.ride_durations.forEach(ride => {
+            const row = document.createElement("tr");
+
+            row.innerHTML = `
+                <td>${ride.index}</td>
+                <td>${ride.duration.toFixed(2)}</td>
+            `;
+
+            tbody.appendChild(row);
+        });
+    }
+
+}, 500);
 </script>
+<hr class="mt-5">
+
+<div class="card shadow mt-4">
+    <div class="card-body">
+        <h5>Ride Durations</h5>
+
+        <table class="table table-bordered mt-3">
+            <thead class="table-dark">
+                <tr>
+                    <th>Ride #</th>
+                    <th>Duration (s)</th>
+                </tr>
+            </thead>
+            <tbody id="ride-duration-body">
+                {% for ride in ride_durations %}
+                <tr>
+                    <td>{{ ride.index }}</td>
+                    <td>{{ "%.2f"|format(ride.duration) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
 {% endblock %}

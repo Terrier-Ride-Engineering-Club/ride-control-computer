@@ -359,7 +359,6 @@ class RCC:
         return self.__rideTimer.data.getAverageRideDuration()
 
     def getTelemetryLogger(self):
-        print(self.__telemetryLogger.getAllRides())
         return self.__telemetryLogger
 
     def getWatchdogStatus(self) -> str:

@@ -41,6 +41,7 @@ class RideTelemetryData:
     rideIndex: int
     startTime: float = field(default_factory=time.monotonic)
     samples: List[TelemetrySample] = field(default_factory=list)
+    duration: float = 0.0
 
     def addSample(
         self,
@@ -117,10 +118,17 @@ class RideTelemetryLogger:
         """
         Call when RCC leaves RUNNING state.
         """
-        if self._currentRide is None:
+        ride = self._currentRide
+        if ride is None:
             return
 
-        self._rides.append(self._currentRide)
+        if ride.samples:
+            duration = ride.samples[-1].rideElapsed
+        else:
+            duration = 0.0
+        ride.duration = duration
+
+        self._rides.append(ride)
         self._currentRide = None
 
     # --------------------------------------------------------

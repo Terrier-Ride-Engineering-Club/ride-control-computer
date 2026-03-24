@@ -78,6 +78,18 @@ class MockWebserverController(WebserverController):
             avg_m1_temp /= count
             avg_m2_temp /= count
 
+        ride_durations = []
+        for ride in rides:
+            if ride.samples:
+                duration = ride.samples[-1].rideElapsed
+            else:
+                duration = 0.0
+
+            ride_durations.append({
+                "index": ride.rideIndex,
+                "duration": duration
+            })
+
         return {
             "elapsed": elapsed,
             "count": count,
@@ -113,6 +125,8 @@ class MockWebserverController(WebserverController):
             "avg_m2_temp": avg_m2_temp,
             "diff_m1_temp": m1_temp - avg_m1_temp,
             "diff_m2_temp": m2_temp - avg_m2_temp,
+
+            "ride_durations": ride_durations,
         }
 
     def start(self):
