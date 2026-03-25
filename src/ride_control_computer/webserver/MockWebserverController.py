@@ -276,6 +276,12 @@ class MockWebserverController(WebserverController):
                 "mc_status_string": mc_status_string,
             })
 
+        @self.app.route("/shutdown", methods=["POST"])
+        def shutdown():
+            if self.rcc:
+                self.rcc.shutdown()
+            return ("", 204)
+
         @self.app.route("/start-theming", methods=["POST"])
         def start_theming():
             self.startTheming()

@@ -14,6 +14,9 @@
         <span id="mc-badge"  class="badge bg-{{ 'success' if mc_connected else 'danger' }} fs-6">MC: {{ 'CONNECTED' if mc_connected else 'DISCONNECTED' }}</span>
         {% set wd_color = {'OK': 'success', 'TIMEOUT': 'danger', 'PLC_ERROR': 'warning', 'DISABLED': 'secondary'} %}
         <span id="wd-badge" class="badge bg-{{ wd_color.get(watchdog, 'secondary') }} fs-6">WD: {{ watchdog }}</span>
+        <form action="/shutdown" method="post" class="ms-auto" onsubmit="return confirm('Shut down the RCC process?')">
+            <button type="submit" class="btn btn-sm btn-outline-danger">Exit</button>
+        </form>
     </div>
     <div class="card-body pt-0 d-flex gap-2 flex-wrap align-items-center" id="mc-status-row">
         <small class="text-muted">MC bits:</small>
