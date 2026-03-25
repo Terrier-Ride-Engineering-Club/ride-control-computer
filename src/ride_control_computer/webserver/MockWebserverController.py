@@ -279,10 +279,15 @@ class MockWebserverController(WebserverController):
         @self.app.route("/shutdown", methods=["POST"])
         def shutdown():
             import subprocess
-            if self.rcc:
-                self.rcc.shutdown()
-            subprocess.Popen(["pkill", "chromium"])
-            return ("", 204)
+            import threading
+            def _do_shutdown():
+                import time
+                time.sleep(0.5)
+                subprocess.Popen(["pkill", "-f", "chromium"])
+                if self.rcc:
+                    self.rcc.shutdown()
+            threading.Thread(target=_do_shutdown, daemon=True).start()
+            return ("Shutting down...", 200)
 
         @self.app.route("/start-theming", methods=["POST"])
         def start_theming():
