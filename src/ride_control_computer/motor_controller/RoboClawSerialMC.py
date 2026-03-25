@@ -14,10 +14,10 @@ from ride_control_computer.motor_controller.MotorController import MotorControll
 from ride_control_computer.motor_controller.RoboClaw import RoboClaw
 
 # --- Limit switch GPIO pins (BCM numbering) ---
-PIN_M1_TOP_LIMIT    = 12
-PIN_M1_BOTTOM_LIMIT = 16
-PIN_M2_TOP_LIMIT    = 20
-PIN_M2_BOTTOM_LIMIT = 21
+PIN_M1_TOP_LIMIT    = 20
+PIN_M1_BOTTOM_LIMIT = 21
+PIN_M2_TOP_LIMIT    = 8
+PIN_M2_BOTTOM_LIMIT = 7
 
 # --- Homing parameters ---
 HOMING_SPEED        = 300   # QPPS — slow creep toward limit switch
@@ -57,8 +57,8 @@ class RoboClawSerialMotorController(MotorController):
     HEARTBEAT_TTL      = 0.025  # seconds — must stay above RoboClaw's 20ms timeout
 
     # --- Motion parameters ---
-    JOG_SPEED          = 500
-    JOG_ACCELERATION   = 200
+    JOG_SPEED          = 100
+    JOG_ACCELERATION   = 2000
     STOP_DECELERATION  = 300
     HALT_DECELERATION  = 10000
     STOPPED_THRESHOLD  = 5      # QPPS — below this, motors are considered stopped

@@ -15,6 +15,17 @@
         {% set wd_color = {'OK': 'success', 'TIMEOUT': 'danger', 'PLC_ERROR': 'warning', 'DISABLED': 'secondary'} %}
         <span id="wd-badge" class="badge bg-{{ wd_color.get(watchdog, 'secondary') }} fs-6">WD: {{ watchdog }}</span>
     </div>
+    <div class="card-body pt-0 d-flex gap-2 flex-wrap align-items-center" id="mc-status-row">
+        <small class="text-muted">MC bits:</small>
+        {% if mc_status_string == 'Normal' %}
+            <span class="badge bg-success">Normal</span>
+        {% else %}
+            {% for bit in mc_status_string.split(', ') %}
+                {% set is_warning = 'Warning' in bit %}
+                <span class="badge bg-{{ 'warning text-dark' if is_warning else 'danger' }}">{{ bit }}</span>
+            {% endfor %}
+        {% endif %}
+    </div>
 </div>
 
 <!-- ===== ACTIVE FAULTS ===== -->
@@ -96,6 +107,16 @@
                     <td id="m1_current">{{ "%.2f"|format(currents[0]) }}</td>
                     <td id="m2_current">{{ "%.2f"|format(currents[1]) }}</td>
                 </tr>
+                <tr>
+                    <td>Top Limit</td>
+                    <td id="m1_top_limit"><span class="badge bg-{{ 'success' if limits.m1_top else 'secondary' }}">{{ 'ACTIVE' if limits.m1_top else 'open' }}</span></td>
+                    <td id="m2_top_limit"><span class="badge bg-{{ 'success' if limits.m2_top else 'secondary' }}">{{ 'ACTIVE' if limits.m2_top else 'open' }}</span></td>
+                </tr>
+                <tr>
+                    <td>Bottom Limit</td>
+                    <td id="m1_bottom_limit"><span class="badge bg-{{ 'success' if limits.m1_bottom else 'secondary' }}">{{ 'ACTIVE' if limits.m1_bottom else 'open' }}</span></td>
+                    <td id="m2_bottom_limit"><span class="badge bg-{{ 'success' if limits.m2_bottom else 'secondary' }}">{{ 'ACTIVE' if limits.m2_bottom else 'open' }}</span></td>
+                </tr>
             </tbody>
         </table>
     </div>
@@ -176,6 +197,25 @@ setInterval(async () => {
     document.getElementById("voltage").innerText    = data.voltage.toFixed(1);
     document.getElementById("elapsed").innerText    = data.elapsed.toFixed(1);
     document.getElementById("avg_time").innerText   = data.avg_time.toFixed(1);
+
+    function setLimitBadge(id, active) {
+        const el = document.getElementById(id);
+        el.innerHTML = `<span class="badge bg-${active ? 'success' : 'secondary'}">${active ? 'ACTIVE' : 'open'}</span>`;
+    }
+    const lim = data.limits || {};
+    setLimitBadge("m1_top_limit",    lim.m1_top);
+    setLimitBadge("m1_bottom_limit", lim.m1_bottom);
+    setLimitBadge("m2_top_limit",    lim.m2_top);
+    setLimitBadge("m2_bottom_limit", lim.m2_bottom);
+
+    const mcStatusRow = document.getElementById("mc-status-row");
+    const mcStr = data.mc_status_string || "Unknown";
+    const bits = mcStr === "Normal" ? ["Normal"] : mcStr.split(", ");
+    mcStatusRow.innerHTML = '<small class="text-muted">MC bits:</small> ' + bits.map(bit => {
+        const isWarning = bit.includes("Warning");
+        const cls = bit === "Normal" ? "bg-success" : isWarning ? "bg-warning text-dark" : "bg-danger";
+        return `<span class="badge ${cls}">${bit}</span>`;
+    }).join(" ");
 
     function renderFaultTable(bodyId, cardId, faults, emptyMsg, activeHeaderClass, inactiveHeaderClass, activeBorderClass) {
         const tbody = document.getElementById(bodyId);
