@@ -146,8 +146,8 @@ class MockWebserverController(WebserverController):
             watchdog = self.rcc.getWatchdogStatus() if self.rcc else "DISABLED"
 
 
-            line1 = positions[0] / 2.56
-            line2 = positions[1] / 2.56
+            line1 = positions[0] / 14.0
+            line2 = positions[1] / 14.0
 
             return render_template(
                 "one.html",
@@ -183,8 +183,8 @@ class MockWebserverController(WebserverController):
                 "m2_pos": positions[1],
                 "faults": faults,
                 "mc_connected": mc_connected,
-                "line1": positions[0] / 2.56,
-                "line2": positions[1] / 2.56,
+                "line1": positions[0] / 14.0,
+                "line2": positions[1] / 14.0,
                 "watchdog": watchdog,
             })
 
