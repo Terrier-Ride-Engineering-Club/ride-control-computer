@@ -14,6 +14,9 @@
         <span id="mc-badge"  class="badge bg-{{ 'success' if mc_connected else 'danger' }} fs-6">MC: {{ 'CONNECTED' if mc_connected else 'DISCONNECTED' }}</span>
         {% set wd_color = {'OK': 'success', 'TIMEOUT': 'danger', 'PLC_ERROR': 'warning', 'DISABLED': 'secondary'} %}
         <span id="wd-badge" class="badge bg-{{ wd_color.get(watchdog, 'secondary') }} fs-6">WD: {{ watchdog }}</span>
+        <form action="/shutdown" method="post" class="ms-auto" onsubmit="return confirm('Shut down the RCC process?')">
+            <button type="submit" class="btn btn-sm btn-outline-danger">Exit</button>
+        </form>
     </div>
     <div class="card-body pt-0 d-flex gap-2 flex-wrap align-items-center" id="mc-status-row">
         <small class="text-muted">MC bits:</small>
@@ -143,6 +146,27 @@
     </div>
 </div>
 
+<!-- ===== PLC WATCHDOG ===== -->
+{% set wd_colors = {'OK': 'success', 'TIMEOUT': 'danger', 'PLC_ERROR': 'warning', 'DISABLED': 'secondary'} %}
+<div class="card shadow mb-4">
+    <div class="card-header bg-{{ wd_colors.get(watchdog_details.status, 'secondary') }} text-white fw-bold" id="wd-card-header">
+        PLC Watchdog — {{ watchdog_details.status }}
+    </div>
+    <div class="card-body p-0">
+        <table class="table table-sm table-bordered mb-0">
+            <tbody id="wd-details-body">
+                <tr><td>Status</td>   <td id="wd-status">{{ watchdog_details.status }}</td></tr>
+                <tr><td>Port</td>     <td id="wd-port">{{ watchdog_details.get('port', '—') }}</td></tr>
+                <tr><td>Port Open</td><td id="wd-port-open">{{ watchdog_details.get('portOpen', '—') }}</td></tr>
+                <tr><td>RCC Counter</td><td id="wd-rcc-counter">{{ watchdog_details.get('rccCounter', '—') }}</td></tr>
+                <tr><td>PLC Counter</td><td id="wd-plc-counter">{{ watchdog_details.get('plcCounter', '—') }}</td></tr>
+                <tr><td>PLC OK</td>   <td id="wd-plc-ok">{{ watchdog_details.get('plcOk', '—') }}</td></tr>
+                <tr><td>Time Since Last Packet (s)</td><td id="wd-age">{{ watchdog_details.get('timeSinceLastPacket', '—') }}</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
 <!-- ===== CONSOLE ===== -->
 {% if console %}
 <div class="card shadow">
@@ -239,6 +263,20 @@ setInterval(async () => {
         "bg-danger", "bg-secondary", "border-danger");
     renderFaultTable("lastEstopBody", "lastEstopCard", data.last_estop_faults || [], "No E-Stop recorded this session",
         "bg-warning", "bg-secondary", "border-warning");
+
+    const wd = data.watchdog_details || {};
+    const wdHeaderColors = { 'OK': 'success', 'TIMEOUT': 'danger', 'PLC_ERROR': 'warning', 'DISABLED': 'secondary' };
+    const wdHeader = document.getElementById("wd-card-header");
+    allColors.forEach(c => wdHeader.classList.remove('bg-' + c));
+    wdHeader.classList.add('bg-' + (wdHeaderColors[wd.status] || 'secondary'));
+    wdHeader.innerText = 'PLC Watchdog — ' + (wd.status || '—');
+    document.getElementById("wd-status").innerText       = wd.status ?? '—';
+    document.getElementById("wd-port").innerText         = wd.port ?? '—';
+    document.getElementById("wd-port-open").innerText    = wd.portOpen != null ? String(wd.portOpen) : '—';
+    document.getElementById("wd-rcc-counter").innerText  = wd.rccCounter ?? '—';
+    document.getElementById("wd-plc-counter").innerText  = wd.plcCounter ?? '—';
+    document.getElementById("wd-plc-ok").innerText       = wd.plcOk != null ? String(wd.plcOk) : '—';
+    document.getElementById("wd-age").innerText          = wd.timeSinceLastPacket ?? '—';
 
 }, 1000);
 </script>

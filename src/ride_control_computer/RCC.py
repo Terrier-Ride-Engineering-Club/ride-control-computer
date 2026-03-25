@@ -371,6 +371,14 @@ class RCC:
             return "PLC_ERROR"
         return "OK"
 
+    def getWatchdogDetails(self) -> dict:
+        """Returns detailed watchdog communication state for the webserver."""
+        if self.__watchdog is None:
+            return {"status": "DISABLED"}
+        details = self.__watchdog.getDetails()
+        details["status"] = self.getWatchdogStatus()
+        return details
+
     def __serializeFaults(self, faults) -> list[dict]:
         result = []
         for f in faults:

@@ -186,6 +186,23 @@ class PLCWatchdog:
         """True if the most recent valid PLC packet had the I'M OK bit set."""
         return self._plcOk
 
+    def getDetails(self) -> dict:
+        """Returns a snapshot of watchdog communication state for display."""
+        now = time.monotonic()
+        if self._lastValidPacketTime == 0.0:
+            ageSec = None
+        else:
+            ageSec = round(now - self._lastValidPacketTime, 3)
+        return {
+            "port":               self._port,
+            "portOpen":           self._serial is not None and self._serial.is_open,
+            "rccCounter":         self._myCounter,
+            "plcCounter":         self._plcCounter,
+            "plcOk":              self._plcOk,
+            "timeSinceLastPacket": ageSec,
+            "timedOut":           self.isTimedOut(),
+        }
+
     # =========================================================================
     #                           WATCHDOG THREAD
     # =========================================================================

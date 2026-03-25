@@ -209,6 +209,7 @@ class MockWebserverController(WebserverController):
             faults = self.rcc.getActiveFaults() if self.rcc else []
             last_estop_faults = self.rcc.getLastEstopFaults() if self.rcc else []
             watchdog = self.rcc.getWatchdogStatus() if self.rcc else "DISABLED"
+            watchdog_details = self.rcc.getWatchdogDetails() if self.rcc else {"status": "DISABLED"}
 
             limits = self.getLimitSwitches()
             mc_status_string = self.getMCStatusString()
@@ -216,6 +217,7 @@ class MockWebserverController(WebserverController):
                 rcc_state=rcc_state,
                 mc_connected=mc_connected,
                 watchdog=watchdog,
+                watchdog_details=watchdog_details,
                 speeds=speeds,
                 positions=positions,
                 temps=temps,
@@ -249,12 +251,14 @@ class MockWebserverController(WebserverController):
             faults = self.rcc.getActiveFaults() if self.rcc else []
             last_estop_faults = self.rcc.getLastEstopFaults() if self.rcc else []
             watchdog = self.rcc.getWatchdogStatus() if self.rcc else "DISABLED"
+            watchdog_details = self.rcc.getWatchdogDetails() if self.rcc else {"status": "DISABLED"}
             limits = self.getLimitSwitches()
             mc_status_string = self.getMCStatusString()
             return jsonify({
                 "rcc_state": rcc_state,
                 "mc_connected": mc_connected,
                 "watchdog": watchdog,
+                "watchdog_details": watchdog_details,
                 "m1_speed": speeds[0],
                 "m2_speed": speeds[1],
                 "m1_pos": positions[0],
@@ -271,6 +275,19 @@ class MockWebserverController(WebserverController):
                 "limits": limits,
                 "mc_status_string": mc_status_string,
             })
+
+        @self.app.route("/shutdown", methods=["POST"])
+        def shutdown():
+            import subprocess
+            import threading
+            def _do_shutdown():
+                import time
+                time.sleep(0.5)
+                subprocess.Popen(["pkill", "-f", "chromium"])
+                if self.rcc:
+                    self.rcc.shutdown()
+            threading.Thread(target=_do_shutdown, daemon=True).start()
+            return ("Shutting down...", 200)
 
         @self.app.route("/start-theming", methods=["POST"])
         def start_theming():
