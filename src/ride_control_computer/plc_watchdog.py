@@ -48,11 +48,12 @@ _BIT_ESTOP2 = 0x80   # bit 7: E-Stop duplicate
 # PLC status byte bit masks (Rev 2026-03-26)
 _PLC_BIT_ESTOP_RELEASED   = 0x01   # bit 0: PLC E-stop gate open (not asserting)
 _PLC_BIT_OK               = 0x02   # bit 1: all safety checks passing
-_PLC_BIT_WATCHDOG_FAULT   = 0x04   # bit 2: RCC packets stopped — latched at E-stop entry
-_PLC_BIT_LIMIT_MISMATCH   = 0x08   # bit 3: PLC/RCC limit switch readings disagree — latched
-_PLC_BIT_MOTION_POST_ESTOP= 0x10   # bit 4: motors still moving after E-stop (live)
-_PLC_BIT_LEVEL0_FAULT     = 0x20   # bit 5: relay cut — terminal, requires power cycle
-_PLC_BIT_ECHO_FAULT       = 0x40   # bit 6: RCC not mirroring PLC counter — latched
+_PLC_BIT_WATCHDOG_FAULT   = 0x04   # bit 2: RCC packets stopped
+_PLC_BIT_LIMIT_MISMATCH   = 0x08   # bit 3: PLC/RCC limit switch readings disagree
+_PLC_BIT_BAD_CRC          = 0x10   # bit 4: packet received but CRC failed (live, clears on good packet)
+_PLC_BIT_LEVEL0_FAULT     = 0x20   # bit 5: relay cut — terminal, requires key cycle to OFF
+_PLC_BIT_ECHO_FAULT       = 0x40   # bit 6: RCC not echoing PLC counter within allowed lag
+_PLC_BIT_MOTION_FAULT     = 0x80   # bit 7: motion envelope violation (motor speed > 9500 QPPS)
 
 # RCCState.FAULT value — used to set I'M OK = False without importing RCC.py
 _RCC_FAULT_VALUE = 6
@@ -130,11 +131,12 @@ class PLCWatchdog:
         # Decoded status fields from the most recent valid PLC packet
         self._plcEstopReleased:    bool = False   # bit 0: E-stop gate open
         self._plcOk:               bool = False   # bit 1: PLC healthy
-        self._plcWatchdogFault:    bool = False   # bit 2: RCC comms lost (latched)
-        self._plcLimitMismatch:    bool = False   # bit 3: limit switch disagreement (latched)
-        self._plcMotionPostEstop:  bool = False   # bit 4: motion after E-stop (live)
+        self._plcWatchdogFault:    bool = False   # bit 2: RCC comms lost
+        self._plcLimitMismatch:    bool = False   # bit 3: limit switch disagreement
+        self._plcBadCrc:           bool = False   # bit 4: received packet had bad CRC (live)
         self._plcLevel0Fault:      bool = False   # bit 5: relay cut — terminal
-        self._plcEchoFault:        bool = False   # bit 6: RCC counter echo bad (latched)
+        self._plcEchoFault:        bool = False   # bit 6: RCC counter echo lag
+        self._plcMotionFault:      bool = False   # bit 7: motion envelope violation
         self._plcStatusBits:       int  = 0       # raw status byte
 
         # Watchdog timing
@@ -225,9 +227,9 @@ class PLCWatchdog:
         """True if the PLC latched a limit switch mismatch against the RCC — bit 3."""
         return self._plcLimitMismatch
 
-    def isMotionPostEstop(self) -> bool:
-        """True if the PLC is detecting motor motion after E-stop (live) — bit 4."""
-        return self._plcMotionPostEstop
+    def isBadCrcFault(self) -> bool:
+        """True if the PLC received a packet with a bad CRC (live, clears on next good packet) — bit 4."""
+        return self._plcBadCrc
 
     def isLevel0Fault(self) -> bool:
         """True if the PLC has cut the 24 V relay — terminal, requires power cycle — bit 5."""
@@ -236,6 +238,10 @@ class PLCWatchdog:
     def isEchoFault(self) -> bool:
         """True if the PLC latched an echo-counter fault (RCC not mirroring counter) — bit 6."""
         return self._plcEchoFault
+
+    def isMotionFault(self) -> bool:
+        """True if the PLC detected a motion envelope violation (motor speed > 9500 QPPS) — bit 7."""
+        return self._plcMotionFault
 
     def getDetails(self) -> dict:
         """Returns a snapshot of watchdog communication state for display."""
@@ -256,9 +262,10 @@ class PLCWatchdog:
             "estopReleased":       self._plcEstopReleased,
             "watchdogFault":       self._plcWatchdogFault,
             "limitMismatch":       self._plcLimitMismatch,
-            "motionPostEstop":     self._plcMotionPostEstop,
+            "badCrcFault":         self._plcBadCrc,
             "level0Fault":         self._plcLevel0Fault,
             "echoFault":           self._plcEchoFault,
+            "motionFault":         self._plcMotionFault,
         }
 
     # =========================================================================
@@ -430,16 +437,21 @@ class PLCWatchdog:
         self._plcOk              = bool(statusBits & _PLC_BIT_OK)
         self._plcWatchdogFault   = bool(statusBits & _PLC_BIT_WATCHDOG_FAULT)
         self._plcLimitMismatch   = bool(statusBits & _PLC_BIT_LIMIT_MISMATCH)
-        self._plcMotionPostEstop = bool(statusBits & _PLC_BIT_MOTION_POST_ESTOP)
+        self._plcBadCrc          = bool(statusBits & _PLC_BIT_BAD_CRC)
         self._plcLevel0Fault     = bool(statusBits & _PLC_BIT_LEVEL0_FAULT)
         self._plcEchoFault       = bool(statusBits & _PLC_BIT_ECHO_FAULT)
+        self._plcMotionFault     = bool(statusBits & _PLC_BIT_MOTION_FAULT)
         self._lastValidPacketTime = time.monotonic()
 
         if self._plcLevel0Fault:
-            logger.critical("PLCWatchdog: PLC Level 0 fault — 24 V relay cut, power cycle required")
+            logger.critical("PLCWatchdog: FAULT_LEVEL0 — relay cut, key must be cycled to OFF to recover")
+        if self._plcMotionFault:
+            logger.critical("PLCWatchdog: FAULT_MOTION — motion envelope violation (motor speed > 9500 QPPS)")
         if self._plcWatchdogFault:
-            logger.error("PLCWatchdog: PLC watchdog fault latched — RCC comms were lost")
+            logger.error("PLCWatchdog: FAULT_WATCHDOG — RCC packets stopped")
         if self._plcEchoFault:
-            logger.error("PLCWatchdog: PLC echo-counter fault latched — RCC counter echo bad")
+            logger.error("PLCWatchdog: FAULT_ECHO_COUNTER — RCC not echoing PLC counter within allowed lag")
+        if self._plcBadCrc:
+            logger.error("PLCWatchdog: FAULT_BAD_CRC — PLC received a packet with invalid CRC")
         if self._plcLimitMismatch:
-            logger.warning("PLCWatchdog: PLC limit switch mismatch latched")
+            logger.warning("PLCWatchdog: FAULT_LIMIT_MISMATCH — PLC and RCC limit switch readings disagree")

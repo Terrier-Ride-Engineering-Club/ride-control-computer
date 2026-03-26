@@ -103,6 +103,42 @@ class RCC:
                 description="No valid packet received from PLC within watchdog timeout",
                 condition=self.__watchdog.isTimedOut,
             ))
+            self.__faultMonitor.register(Fault(
+                code="PLC_FAULT_WATCHDOG",
+                severity=FaultSeverity.HIGH,
+                description="PLC: RCC packets stopped (PLC-side watchdog fired)",
+                condition=self.__watchdog.isWatchdogFault,
+            ))
+            self.__faultMonitor.register(Fault(
+                code="PLC_FAULT_LIMIT_MISMATCH",
+                severity=FaultSeverity.HIGH,
+                description="PLC: limit switch readings disagree between PLC and RCC",
+                condition=self.__watchdog.isLimitSwitchMismatch,
+            ))
+            self.__faultMonitor.register(Fault(
+                code="PLC_FAULT_BAD_CRC",
+                severity=FaultSeverity.HIGH,
+                description="PLC: received RCC packet with invalid CRC",
+                condition=self.__watchdog.isBadCrcFault,
+            ))
+            self.__faultMonitor.register(Fault(
+                code="PLC_FAULT_ECHO_COUNTER",
+                severity=FaultSeverity.HIGH,
+                description="PLC: RCC not echoing PLC counter within allowed lag",
+                condition=self.__watchdog.isEchoFault,
+            ))
+            self.__faultMonitor.register(Fault(
+                code="PLC_FAULT_MOTION",
+                severity=FaultSeverity.HIGH,
+                description="PLC: motion envelope violation (motor speed exceeded 9500 QPPS)",
+                condition=self.__watchdog.isMotionFault,
+            ))
+            self.__faultMonitor.register(Fault(
+                code="PLC_FAULT_LEVEL0",
+                severity=FaultSeverity.HIGH,
+                description="PLC: Level 0 fault — relay cut, key must be cycled to OFF to recover",
+                condition=self.__watchdog.isLevel0Fault,
+            ))
         else:
             self.__watchdog = None
 
