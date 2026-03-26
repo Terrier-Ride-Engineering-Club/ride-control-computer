@@ -367,9 +367,12 @@ class RCC:
         return self.__telemetryLogger
 
     def getWatchdogStatus(self) -> str:
-        """Returns watchdog status as a display string: DISABLED, OK, PLC_ERROR, or TIMEOUT."""
+        """Returns watchdog status as a display string: DISABLED, DISCONNECTED, OK, PLC_ERROR, or TIMEOUT."""
         if self.__watchdog is None:
             return "DISABLED"
+        details = self.__watchdog.getDetails()
+        if not details["portOpen"]:
+            return "DISCONNECTED"
         if self.__watchdog.isTimedOut():
             return "TIMEOUT"
         if not self.__watchdog.isPlcOk():

@@ -382,8 +382,3 @@ class PLCWatchdog:
         self._plcCounter   = plcCounter
         self._plcOk        = bool(statusBits & _PLC_BIT_IM_OK)
         self._lastValidPacketTime = time.monotonic()
-
-        logger.debug(
-            f"PLCWatchdog: valid PLC packet — counter={plcCounter} "
-            f"ok={self._plcOk} limits={limitSwitches:#04x}"
-        )
