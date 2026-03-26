@@ -31,7 +31,7 @@ _TX_PAYLOAD_SIZE = struct.calcsize(_TX_PAYLOAD_FMT)   # 67
 _TX_SIZE         = struct.calcsize(_TX_FMT)            # 69
 
 # PLC → RCC  (10 bytes = 8 payload + 2 CRC)
-#   myCounter(H) yourCounter(H) statusBits(B) limitSwitches(B) reserved(H) crc(H)
+#   myCounter(H) yourCounter(H) statusBits(B) reserved(B) reserved(H) crc(H)
 _RX_PAYLOAD_FMT = '<HHBBH'
 _RX_FMT         = _RX_PAYLOAD_FMT + 'H'
 _RX_PAYLOAD_SIZE = struct.calcsize(_RX_PAYLOAD_FMT)   # 8
@@ -45,8 +45,14 @@ _BIT_ESTOP  = 0x01   # bit 0: E-Stop active
 _BIT_IM_OK  = 0x02   # bit 1: RCC is healthy
 _BIT_ESTOP2 = 0x80   # bit 7: E-Stop duplicate
 
-# PLC status byte bit masks
-_PLC_BIT_IM_OK = 0x02
+# PLC status byte bit masks (Rev 2026-03-26)
+_PLC_BIT_ESTOP_RELEASED   = 0x01   # bit 0: PLC E-stop gate open (not asserting)
+_PLC_BIT_OK               = 0x02   # bit 1: all safety checks passing
+_PLC_BIT_WATCHDOG_FAULT   = 0x04   # bit 2: RCC packets stopped — latched at E-stop entry
+_PLC_BIT_LIMIT_MISMATCH   = 0x08   # bit 3: PLC/RCC limit switch readings disagree — latched
+_PLC_BIT_MOTION_POST_ESTOP= 0x10   # bit 4: motors still moving after E-stop (live)
+_PLC_BIT_LEVEL0_FAULT     = 0x20   # bit 5: relay cut — terminal, requires power cycle
+_PLC_BIT_ECHO_FAULT       = 0x40   # bit 6: RCC not mirroring PLC counter — latched
 
 # RCCState.FAULT value — used to set I'M OK = False without importing RCC.py
 _RCC_FAULT_VALUE = 6
@@ -118,10 +124,18 @@ class PLCWatchdog:
         self._myCounter: int = 0
         # Last PLC counter received (for echo-back and advance validation)
         self._plcCounter: int = 0
-        # Whether the PLC reported I'M OK in its most recent valid packet
-        self._plcOk: bool = False
         # True on first packet — skip counter-advance check since we have no baseline
         self._firstPacket: bool = True
+
+        # Decoded status fields from the most recent valid PLC packet
+        self._plcEstopReleased:    bool = False   # bit 0: E-stop gate open
+        self._plcOk:               bool = False   # bit 1: PLC healthy
+        self._plcWatchdogFault:    bool = False   # bit 2: RCC comms lost (latched)
+        self._plcLimitMismatch:    bool = False   # bit 3: limit switch disagreement (latched)
+        self._plcMotionPostEstop:  bool = False   # bit 4: motion after E-stop (live)
+        self._plcLevel0Fault:      bool = False   # bit 5: relay cut — terminal
+        self._plcEchoFault:        bool = False   # bit 6: RCC counter echo bad (latched)
+        self._plcStatusBits:       int  = 0       # raw status byte
 
         # Watchdog timing
         self._startTime: float = 0.0
@@ -196,8 +210,32 @@ class PLCWatchdog:
         return (time.monotonic() - self._lastValidPacketTime) > self._timeoutS
 
     def isPlcOk(self) -> bool:
-        """True if the most recent valid PLC packet had the I'M OK bit set."""
+        """True if the PLC reported all safety checks passing (bit 1)."""
         return self._plcOk
+
+    def isEstopReleased(self) -> bool:
+        """True if the PLC E-stop gate is open (not asserting) — bit 0."""
+        return self._plcEstopReleased
+
+    def isWatchdogFault(self) -> bool:
+        """True if the PLC latched a watchdog fault (RCC comms dropped) — bit 2."""
+        return self._plcWatchdogFault
+
+    def isLimitSwitchMismatch(self) -> bool:
+        """True if the PLC latched a limit switch mismatch against the RCC — bit 3."""
+        return self._plcLimitMismatch
+
+    def isMotionPostEstop(self) -> bool:
+        """True if the PLC is detecting motor motion after E-stop (live) — bit 4."""
+        return self._plcMotionPostEstop
+
+    def isLevel0Fault(self) -> bool:
+        """True if the PLC has cut the 24 V relay — terminal, requires power cycle — bit 5."""
+        return self._plcLevel0Fault
+
+    def isEchoFault(self) -> bool:
+        """True if the PLC latched an echo-counter fault (RCC not mirroring counter) — bit 6."""
+        return self._plcEchoFault
 
     def getDetails(self) -> dict:
         """Returns a snapshot of watchdog communication state for display."""
@@ -207,13 +245,20 @@ class PLCWatchdog:
         else:
             ageSec = round(now - self._lastValidPacketTime, 3)
         return {
-            "port":               self._port,
-            "portOpen":           self._serial is not None and self._serial.is_open,
-            "rccCounter":         self._myCounter,
-            "plcCounter":         self._plcCounter,
-            "plcOk":              self._plcOk,
+            "port":                self._port,
+            "portOpen":            self._serial is not None and self._serial.is_open,
+            "rccCounter":          self._myCounter,
+            "plcCounter":          self._plcCounter,
             "timeSinceLastPacket": ageSec,
-            "timedOut":           self.isTimedOut(),
+            "timedOut":            self.isTimedOut(),
+            "plcStatusBits":       f"{self._plcStatusBits:#04x}",
+            "plcOk":               self._plcOk,
+            "estopReleased":       self._plcEstopReleased,
+            "watchdogFault":       self._plcWatchdogFault,
+            "limitMismatch":       self._plcLimitMismatch,
+            "motionPostEstop":     self._plcMotionPostEstop,
+            "level0Fault":         self._plcLevel0Fault,
+            "echoFault":           self._plcEchoFault,
         }
 
     # =========================================================================
@@ -362,7 +407,7 @@ class PLCWatchdog:
                 self._rxBuffer = self._rxBuffer[1:]
 
     def _processPacket(self, payload: bytes) -> None:
-        plcCounter, echoCounter, statusBits, limitSwitches, _reserved = struct.unpack(
+        plcCounter, echoCounter, statusBits, _reserved1, _reserved2 = struct.unpack(
             _RX_PAYLOAD_FMT, payload
         )
 
@@ -378,7 +423,23 @@ class PLCWatchdog:
                 )
                 return
 
-        self._firstPacket  = False
-        self._plcCounter   = plcCounter
-        self._plcOk        = bool(statusBits & _PLC_BIT_IM_OK)
+        self._firstPacket        = False
+        self._plcCounter         = plcCounter
+        self._plcStatusBits      = statusBits
+        self._plcEstopReleased   = bool(statusBits & _PLC_BIT_ESTOP_RELEASED)
+        self._plcOk              = bool(statusBits & _PLC_BIT_OK)
+        self._plcWatchdogFault   = bool(statusBits & _PLC_BIT_WATCHDOG_FAULT)
+        self._plcLimitMismatch   = bool(statusBits & _PLC_BIT_LIMIT_MISMATCH)
+        self._plcMotionPostEstop = bool(statusBits & _PLC_BIT_MOTION_POST_ESTOP)
+        self._plcLevel0Fault     = bool(statusBits & _PLC_BIT_LEVEL0_FAULT)
+        self._plcEchoFault       = bool(statusBits & _PLC_BIT_ECHO_FAULT)
         self._lastValidPacketTime = time.monotonic()
+
+        if self._plcLevel0Fault:
+            logger.critical("PLCWatchdog: PLC Level 0 fault — 24 V relay cut, power cycle required")
+        if self._plcWatchdogFault:
+            logger.error("PLCWatchdog: PLC watchdog fault latched — RCC comms were lost")
+        if self._plcEchoFault:
+            logger.error("PLCWatchdog: PLC echo-counter fault latched — RCC counter echo bad")
+        if self._plcLimitMismatch:
+            logger.warning("PLCWatchdog: PLC limit switch mismatch latched")
