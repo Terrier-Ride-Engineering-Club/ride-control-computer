@@ -80,9 +80,10 @@ class PLCWatchdog:
     the RoboClaw serial thread (which uses a separate port).
     """
 
-    DEFAULT_BAUD     = 115200
-    DEFAULT_TIMEOUT  = 0.5    # seconds before watchdog fires
-    DEFAULT_INTERVAL = 0.01   # 10 ms transmit interval
+    DEFAULT_BAUD        = 115200
+    DEFAULT_TIMEOUT     = 0.5    # seconds before watchdog fires
+    DEFAULT_INTERVAL    = 0.01   # 10 ms transmit interval
+    RECONNECT_INTERVAL  = 5.0    # seconds between reconnection attempts
 
     def __init__(
         self,
@@ -126,6 +127,9 @@ class PLCWatchdog:
         self._startTime: float = 0.0
         self._lastValidPacketTime: float = 0.0   # 0.0 = thread not started yet
 
+        # Reconnection tracking
+        self._lastConnectAttempt: float = 0.0
+
         # Receive accumulation buffer (handles partial / fragmented reads)
         self._rxBuffer: bytes = b''
 
@@ -135,20 +139,11 @@ class PLCWatchdog:
 
     def start(self) -> None:
         """Open serial port and start the watchdog background thread."""
-        try:
-            self._serial = serial.Serial(
-                port=self._port,
-                baudrate=self._baud,
-                timeout=0.001,   # 1 ms read timeout — effectively non-blocking
-            )
-            logger.info(f"PLCWatchdog opened on {self._port} @ {self._baud} baud")
-        except serial.SerialException as e:
-            logger.error(f"PLCWatchdog failed to open {self._port}: {e} — watchdog disabled")
-            self._serial = None
-
         self._startTime = time.monotonic()
         # Grace period: give the system `timeoutS` from start before first timeout check
         self._lastValidPacketTime = self._startTime
+
+        self._tryConnect()
 
         self._stopEvent.clear()
         self._thread = threading.Thread(
@@ -157,6 +152,24 @@ class PLCWatchdog:
             name="PLCWatchdog",
         )
         self._thread.start()
+
+    def _tryConnect(self) -> None:
+        """Attempt to open the serial port. Resets communication state on success."""
+        self._lastConnectAttempt = time.monotonic()
+        try:
+            self._serial = serial.Serial(
+                port=self._port,
+                baudrate=self._baud,
+                timeout=0.001,   # 1 ms read timeout — effectively non-blocking
+            )
+            logger.info(f"PLCWatchdog opened on {self._port} @ {self._baud} baud")
+            # Reset communication state so the grace period and counter checks restart cleanly
+            self._lastValidPacketTime = time.monotonic()
+            self._firstPacket = True
+            self._rxBuffer = b''
+        except serial.SerialException as e:
+            logger.warning(f"PLCWatchdog failed to open {self._port}: {e} — will retry in {self.RECONNECT_INTERVAL}s")
+            self._serial = None
 
     def shutdown(self) -> None:
         """Stop the watchdog thread and close the serial port."""
@@ -211,11 +224,21 @@ class PLCWatchdog:
         while not self._stopEvent.is_set():
             loopStart = time.monotonic()
 
+            if self._serial is None or not self._serial.is_open:
+                if loopStart - self._lastConnectAttempt >= self.RECONNECT_INTERVAL:
+                    logger.info("PLCWatchdog attempting reconnect...")
+                    self._tryConnect()
+                self._stopEvent.wait(0.1)
+                continue
+
             try:
                 self._sendPacket()
                 self._receivePackets()
             except serial.SerialException as e:
-                logger.error(f"PLCWatchdog serial error: {e}")
+                logger.error(f"PLCWatchdog serial error: {e} — will retry in {self.RECONNECT_INTERVAL}s")
+                if self._serial and self._serial.is_open:
+                    self._serial.close()
+                self._serial = None
             except Exception as e:
                 logger.error(f"PLCWatchdog loop error: {e}")
 
