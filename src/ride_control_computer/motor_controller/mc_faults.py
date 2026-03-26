@@ -29,8 +29,10 @@ def registerMotorControllerFaults(
     monitor: FaultMonitor,
     mc: MotorController,
     isMotionForbidden: Callable[[], bool],
-    isAtTopLimit: Callable[[], bool],
-    isAtBottomLimit: Callable[[], bool],
+    isMotor1AtTopLimit: Callable[[], bool],
+    isMotor2AtTopLimit: Callable[[], bool],
+    isMotor1AtBottomLimit: Callable[[], bool],
+    isMotor2AtBottomLimit: Callable[[], bool],
 
 ) -> None:
     """Register all motor-controller-related fault conditions.
@@ -65,8 +67,14 @@ def registerMotorControllerFaults(
         condition=lambda: isMotionForbidden() and any(abs(s) > 10 for s in mc.getMotorSpeeds()),
     ))
     monitor.register(Fault(
-        code="MC_LIMIT_SWITCH_VIOLATION",
+        code="MC_MOTOR1_LIMIT_SWITCH_VIOLATION",
         severity=FaultSeverity.HIGH,
-        description= lambda: f"Limit switches both active on tower: ", #im not sure what needs to go here to get the motor number
-        condition=lambda: isAtTopLimit() and isAtBottomLimit()
+        description= "Limit switches both active on tower 1",
+        condition=lambda: isMotor1AtTopLimit() and isMotor1AtBottomLimit()
+    ))
+    monitor.register(Fault(
+        code="MC_MOTOR2_LIMIT_SWITCH_VIOLATION",
+        severity=FaultSeverity.HIGH,
+        description="Limit switches both active on tower 2",
+        condition=lambda: isMotor1AtTopLimit() and isMotor2AtBottomLimit()
     ))
