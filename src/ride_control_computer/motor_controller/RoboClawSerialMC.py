@@ -89,6 +89,10 @@ class RoboClawSerialMotorController(MotorController):
         self._commandDrive: dict[int, tuple[int, int, int, int]] = {}
         # Set to True by homeMotors(); cleared implicitly when command switches away from HOME
         self._homingActive: bool = False
+        # Per-motor flag: True once the encoder has been zeroed for the current bottom-limit arrival.
+        # Reset by homeMotors() at the start of each homing sequence.
+        # Reset per-motor in the JOG branch when the motor leaves the bottom limit.
+        self._bottomResetDone: dict[int, bool] = {1: False, 2: False}
 
         # --- Telemetry cache (serial thread writes, any thread reads) ---
         self._telemetry = ControllerTelemetry()
@@ -201,6 +205,7 @@ class RoboClawSerialMotorController(MotorController):
         with self._commandLock:
             self._commandType = _CommandType.HOME
             self._homingActive = True
+            self._bottomResetDone = {1: False, 2: False}
 
     def isAtBottomLimit(self, motor: int) -> bool:
         return self._limitCache[motor]["bottom"]
@@ -430,10 +435,11 @@ class RoboClawSerialMotorController(MotorController):
             return
 
         with self._commandLock:
-            cmdType     = self._commandType
-            cmdDecel    = self._commandDecel
-            cmdJogDir   = self._commandJogDir
-            cmdDrive    = dict(self._commandDrive)
+            cmdType         = self._commandType
+            cmdDecel        = self._commandDecel
+            cmdJogDir       = self._commandJogDir
+            cmdDrive        = dict(self._commandDrive)
+            bottomResetDone = dict(self._bottomResetDone)
 
         if cmdType == _CommandType.STOP:
             for motor in [1, 2]:
@@ -441,10 +447,25 @@ class RoboClawSerialMotorController(MotorController):
 
         elif cmdType == _CommandType.JOG:
             for motor in [1, 2]:
-                atLimit = (cmdJogDir > 0 and self._limitCache[motor]["top"]) or \
-                          (cmdJogDir < 0 and self._limitCache[motor]["bottom"])
-                speed = 0 if atLimit else (self.JOG_SPEED if cmdJogDir > 0 else -self.JOG_SPEED)
+                atTop    = self._limitCache[motor]["top"]
+                atBottom = self._limitCache[motor]["bottom"]
+                atLimit  = (cmdJogDir > 0 and atTop) or (cmdJogDir < 0 and atBottom)
+                speed    = 0 if atLimit else (self.JOG_SPEED if cmdJogDir > 0 else -self.JOG_SPEED)
                 self._roboClaw.set_speed_with_acceleration(motor, speed, self.JOG_ACCELERATION)
+
+                # Encoder reset: fires once per bottom-limit arrival when jogging down.
+                # Flag is cleared when the motor leaves the bottom so re-arrivals reset again.
+                if cmdJogDir < 0:
+                    if atBottom and not bottomResetDone[motor]:
+                        self._roboClaw.reset_quad_encoders([motor])
+                        with self._commandLock:
+                            self._bottomResetDone[motor] = True
+                        bottomResetDone[motor] = True
+                        logger.info(f"Motor {motor} encoder zeroed at bottom limit (jog)")
+                    elif not atBottom:
+                        with self._commandLock:
+                            self._bottomResetDone[motor] = False
+                        bottomResetDone[motor] = False
 
         elif cmdType == _CommandType.DRIVE:
             for motor, (pos, spd, acc, dec) in cmdDrive.items():
@@ -459,6 +480,15 @@ class RoboClawSerialMotorController(MotorController):
             spd2 = 0 if m2Home else -HOMING_SPEED
             self._roboClaw.set_speed_with_acceleration(1, spd1, HOMING_ACCELERATION)
             self._roboClaw.set_speed_with_acceleration(2, spd2, HOMING_ACCELERATION)
+
+            # Reset each motor's encoder the first time it reaches the bottom limit this sequence
+            for motor, atHome in [(1, m1Home), (2, m2Home)]:
+                if atHome and not bottomResetDone[motor]:
+                    self._roboClaw.reset_quad_encoders([motor])
+                    with self._commandLock:
+                        self._bottomResetDone[motor] = True
+                    logger.info(f"Motor {motor} encoder zeroed at bottom limit (homing)")
+
             # Auto-switch to STOP once both motors have reached the home limit
             if m1Home and m2Home:
                 with self._commandLock:
