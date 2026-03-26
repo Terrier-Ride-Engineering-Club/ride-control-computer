@@ -517,6 +517,7 @@ class RCC:
             logger.debug(f"[MC Type]: {str(type(self.__motorController))}")
             logger.info(f"[MC Connection]: {mcStatus}")
             logger.info(f"[MC State]: {self.__motorController.getState()}")
+            logger.info(f"[Watchdog]: {self.getWatchdogDetails()}")
             rt = self.__rideTimer.data
             rideStatus = f"RUNNING ({rt.getCurrentRideElapsed():.1f}s)" if rt.rideActive else "—"
             logger.info(f"[Uptime]: {rt.getUptime():.1f}s")
