@@ -58,11 +58,12 @@ def main():
         from ride_control_computer.motor_controller.RoboClawSerialMC import RoboClawSerialMotorController
 
         ROBOCLAW_PORTS = [
-            '/dev/ttyAMA1',   # Pi GPIO serial
-            '/dev/ttyACM0',   # USB (Pi)
-            '/dev/ttyACM1',   # USB (Pi fallback)
+            '/dev/roboclaw',  # udev symlink (preferred)
+            '/dev/ttyAMA1',   # Pi GPIO serial (fallback)
+            '/dev/ttyACM0',   # USB fallback
+            '/dev/ttyACM1',   # USB fallback
         ]
-        WATCHDOG_PORT = None if args.no_watchdog else '/dev/ttyUSB0'  # Arduino Nano (PLC) via USB CDC
+        WATCHDOG_PORT = None if args.no_watchdog else '/dev/plc-watchdog'  # udev symlink for Arduino (PLC)
 
         mc = RoboClawSerialMotorController(ROBOCLAW_PORTS)
         # TODO: Add hardware ThemingController when implemented
