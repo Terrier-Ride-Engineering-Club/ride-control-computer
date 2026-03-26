@@ -336,6 +336,8 @@ class RCC:
             self.__faultMonitor,
             self.__motorController,
             isMotionForbidden=lambda: self.__state in (RCCState.IDLE, RCCState.OFF),
+            isAtTopLimit= lambda: self.__state in (RCCState.RUNNING, RCCState.STOPPING),
+            isAtBottomLimit= lambda: self.__state in (RCCState.RUNNING, RCCState.STOPPING),
         )
 
     # =========================================================================
