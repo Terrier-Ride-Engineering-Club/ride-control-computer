@@ -96,10 +96,10 @@ class RoboClawSerialMotorController(MotorController):
 
         # --- Limit switches (active-high, no internal pull-up) ---
         self._limitSwitches = {
-            1: {"top": Button(PIN_M1_TOP_LIMIT,    pull_up=True, active_state=True),
-                "bottom": Button(PIN_M1_BOTTOM_LIMIT, pull_up=True, active_state=True)},
-            2: {"top": Button(PIN_M2_TOP_LIMIT,    pull_up=True, active_state=True),
-                "bottom": Button(PIN_M2_BOTTOM_LIMIT, pull_up=True, active_state=True)},
+            1: {"top": Button(PIN_M1_TOP_LIMIT,    pull_up=True),
+                "bottom": Button(PIN_M1_BOTTOM_LIMIT, pull_up=True)},
+            2: {"top": Button(PIN_M2_TOP_LIMIT,    pull_up=True),
+                "bottom": Button(PIN_M2_BOTTOM_LIMIT, pull_up=True)},
         }
         # Limit switch cache — seeded from GPIO at startup and kept current via
         # gpiozero when_pressed/when_released callbacks (no serial-thread polling).
