@@ -25,14 +25,14 @@ logger = logging.getLogger(__name__)
 #   m1CmdPos(i) m1CmdSpeed(i) m1CmdAccel(I) m1CmdDecel(I)
 #   m2CmdPos(i) m2CmdSpeed(i) m2CmdAccel(I) m2CmdDecel(I)
 #   rideState(B) limitSwitches(B) crc(H)
-_TX_PAYLOAD_FMT = '>HHBiihiihHIHiiIIiiIIBB'
+_TX_PAYLOAD_FMT = '<HHBiihiihHIHiiIIiiIIBB'
 _TX_FMT         = _TX_PAYLOAD_FMT + 'H'   # with CRC appended
 _TX_PAYLOAD_SIZE = struct.calcsize(_TX_PAYLOAD_FMT)   # 67
 _TX_SIZE         = struct.calcsize(_TX_FMT)            # 69
 
 # PLC → RCC  (10 bytes = 8 payload + 2 CRC)
 #   myCounter(H) yourCounter(H) statusBits(B) limitSwitches(B) reserved(H) crc(H)
-_RX_PAYLOAD_FMT = '>HHBBH'
+_RX_PAYLOAD_FMT = '<HHBBH'
 _RX_FMT         = _RX_PAYLOAD_FMT + 'H'
 _RX_PAYLOAD_SIZE = struct.calcsize(_RX_PAYLOAD_FMT)   # 8
 _RX_SIZE         = struct.calcsize(_RX_FMT)            # 10
@@ -234,7 +234,7 @@ class PLCWatchdog:
 
         payload = self._buildPayload()
         crc = _crc16(payload)
-        self._serial.write(payload + struct.pack('>H', crc))
+        self._serial.write(payload + struct.pack('<H', crc))
 
         self._myCounter = (self._myCounter + 1) & 0xFFFF
 
@@ -328,7 +328,7 @@ class PLCWatchdog:
         while len(self._rxBuffer) >= _RX_SIZE:
             raw     = self._rxBuffer[:_RX_SIZE]
             payload = raw[:-2]
-            receivedCrc, = struct.unpack('>H', raw[-2:])
+            receivedCrc, = struct.unpack('<H', raw[-2:])
 
             if _crc16(payload) == receivedCrc:
                 self._processPacket(payload)
