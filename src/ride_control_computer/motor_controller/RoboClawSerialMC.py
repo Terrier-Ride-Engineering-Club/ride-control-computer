@@ -98,12 +98,17 @@ class RoboClawSerialMotorController(MotorController):
         self._telemetry = ControllerTelemetry()
         self._telemetryLock = Lock()
 
-        # --- Limit switches (active-high, no internal pull-up) ---
+        # --- Limit switches (NC, 3.3 V) ---
+        # Switches are normally-closed with 3.3 V: pin HIGH = switch closed = NOT at limit.
+        # When a limit is hit the switch opens, the internal pull-down takes the pin LOW,
+        # and the cache entry is set True (at limit).
+        # pull_up=False → internal pull-down; when_pressed fires on HIGH (switch closes),
+        # when_released fires on LOW (switch opens = limit hit).
         self._limitSwitches = {
-            1: {"top": Button(PIN_M1_TOP_LIMIT,    pull_up=True),
-                "bottom": Button(PIN_M1_BOTTOM_LIMIT, pull_up=True)},
-            2: {"top": Button(PIN_M2_TOP_LIMIT,    pull_up=True),
-                "bottom": Button(PIN_M2_BOTTOM_LIMIT, pull_up=True)},
+            1: {"top": Button(PIN_M1_TOP_LIMIT,    pull_up=False),
+                "bottom": Button(PIN_M1_BOTTOM_LIMIT, pull_up=False)},
+            2: {"top": Button(PIN_M2_TOP_LIMIT,    pull_up=False),
+                "bottom": Button(PIN_M2_BOTTOM_LIMIT, pull_up=False)},
         }
         # Limit switch cache — seeded from GPIO at startup and kept current via
         # gpiozero when_pressed/when_released callbacks (no serial-thread polling).
@@ -116,9 +121,10 @@ class RoboClawSerialMotorController(MotorController):
             return cb
         for motor, switches in self._limitSwitches.items():
             for pos, btn in switches.items():
-                self._limitCache[motor][pos] = btn.is_pressed
-                btn.when_pressed  = _makeLimitCallback(motor, pos, True)
-                btn.when_released = _makeLimitCallback(motor, pos, False)
+                # is_pressed=True means 3.3 V (switch closed) = NOT at limit → invert seed
+                self._limitCache[motor][pos] = not btn.is_pressed
+                btn.when_pressed  = _makeLimitCallback(motor, pos, False)  # 3.3 V → not at limit
+                btn.when_released = _makeLimitCallback(motor, pos, True)   # pin LOW → at limit
 
         # --- Background thread control ---
         self._stopEvent = Event()
