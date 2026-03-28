@@ -150,6 +150,14 @@ class PLCWatchdog:
         # Receive accumulation buffer (handles partial / fragmented reads)
         self._rxBuffer: bytes = b''
 
+        # Persistent CRC-error counter — must survive across _receivePackets() calls so
+        # that the desync detection threshold can be reached even when only one packet
+        # arrives per call (which is typical at the 20 ms PLC transmit rate).
+        self._consecutiveCrcErrors: int = 0
+
+        # Timestamp of the last in-place counter re-sync (throttles repeated resets)
+        self._lastResyncTime: float = 0.0
+
     # =========================================================================
     #                           LIFECYCLE
     # =========================================================================
@@ -185,6 +193,8 @@ class PLCWatchdog:
             self._lastValidPacketTime = time.monotonic()
             self._firstPacket = True
             self._rxBuffer = b''
+            self._plcCounter = 0   # echo 0 until first packet received; avoids stale-echo echoFault
+            self._consecutiveCrcErrors = 0
         except serial.SerialException as e:
             logger.warning(f"PLCWatchdog failed to open {self._port}: {e} — will retry in {self.RECONNECT_INTERVAL}s")
             self._serial = None
@@ -284,6 +294,23 @@ class PLCWatchdog:
                     self._tryConnect()
                 self._stopEvent.wait(0.1)
                 continue
+
+            # If timed out while the port is still open, the RX state is likely corrupted
+            # (e.g. _plcCounter set to a garbage value by a framing-desync false-positive CRC,
+            # causing every real PLC packet to fail the delta check silently).
+            # Reset sync state so the next valid packet can re-establish the baseline.
+            # Throttled to once per second so it doesn't thrash during a hard comms failure.
+            if self.isTimedOut() and (loopStart - self._lastResyncTime) >= 1.0:
+                logger.warning(
+                    "PLCWatchdog: timeout with port open — resetting RX sync state to recover"
+                )
+                self._lastResyncTime    = loopStart
+                self._firstPacket       = True
+                self._plcCounter        = 0
+                self._rxBuffer          = b''
+                self._consecutiveCrcErrors = 0
+                if self._serial.is_open:
+                    self._serial.reset_input_buffer()
 
             try:
                 self._sendPacket()
@@ -423,8 +450,10 @@ class PLCWatchdog:
         if waiting > 0:
             self._rxBuffer += self._serial.read(waiting)
 
-        # Parse as many complete 10-byte packets as are available
-        consecutiveCrcErrors = 0
+        # Parse as many complete 10-byte packets as are available.
+        # NOTE: self._consecutiveCrcErrors is an instance variable (not local) so that
+        # errors accumulate across calls — critical because the PLC sends at 20 ms and
+        # the RCC reads at 10 ms, meaning typically only one packet per call.
         while len(self._rxBuffer) >= _RX_SIZE:
             raw     = self._rxBuffer[:_RX_SIZE]
             payload = raw[:-2]
@@ -433,24 +462,26 @@ class PLCWatchdog:
             if _crc16(payload) == receivedCrc:
                 self._processPacket(payload)
                 self._rxBuffer = self._rxBuffer[_RX_SIZE:]
-                consecutiveCrcErrors = 0
+                self._consecutiveCrcErrors = 0
             else:
-                consecutiveCrcErrors += 1
-                if consecutiveCrcErrors >= _RX_SIZE:
-                    # Shifted through an entire packet worth of bytes without finding a valid
-                    # frame boundary — the buffer is hopelessly misaligned. Discard everything
-                    # and re-sync from the next fresh read.
+                self._consecutiveCrcErrors += 1
+                if self._consecutiveCrcErrors >= _RX_SIZE:
+                    # Accumulated an entire packet-worth of consecutive CRC failures across
+                    # one or more calls — buffer is misaligned.  Discard and re-sync.
                     logger.warning(
-                        f"PLCWatchdog: RX buffer desync — discarding {len(self._rxBuffer)} bytes to re-sync"
+                        f"PLCWatchdog: RX buffer desync ({self._consecutiveCrcErrors} consecutive "
+                        f"CRC errors) — discarding {len(self._rxBuffer)} bytes to re-sync"
                     )
                     self._rxBuffer = b''
+                    self._consecutiveCrcErrors = 0
                     if self._serial and self._serial.is_open:
                         self._serial.reset_input_buffer()
                     break
                 # CRC mismatch: shift one byte to re-find packet boundary
                 logger.warning(
-                    f"PLCWatchdog: CRC mismatch — re-syncing RX buffer "
-                    f"(raw={raw.hex()}, expected={_crc16(payload):#06x}, got={receivedCrc:#06x})"
+                    f"PLCWatchdog: CRC mismatch (error {self._consecutiveCrcErrors}/{_RX_SIZE}) — "
+                    f"re-syncing RX buffer (raw={raw.hex()}, "
+                    f"expected={_crc16(payload):#06x}, got={receivedCrc:#06x})"
                 )
                 self._rxBuffer = self._rxBuffer[1:]
 
@@ -466,10 +497,13 @@ class PLCWatchdog:
                 logger.warning(f"PLCWatchdog: duplicate PLC counter ({plcCounter}) — ignoring packet")
                 return
             if delta >= 0x8000:
+                # Large negative delta means the PLC counter wrapped backwards — the PLC restarted.
+                # Accept the packet and re-sync rather than silently dropping all future packets.
                 logger.warning(
-                    f"PLCWatchdog: PLC counter did not advance (delta={delta:#06x}) — ignoring"
+                    f"PLCWatchdog: PLC counter regression detected "
+                    f"(old={self._plcCounter}, new={plcCounter}) — treating as PLC restart"
                 )
-                return
+                self._firstPacket = True
 
         self._firstPacket        = False
         self._plcCounter         = plcCounter
