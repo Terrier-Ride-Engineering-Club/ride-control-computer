@@ -4,8 +4,8 @@
     "segments": [
         {
             "name": "Lift",
-            "motor1": {"type": "driveToPosition", "position": 4000, "speed": 2000, "accel": 1000, "decel": 2000},
-            "motor2": {"type": "driveToPosition", "position": 4000, "speed": 2000, "accel": 1000, "decel": 2000},
+            "motor1": {"type": "driveToPosition", "position": 4500, "speed": 2500, "accel": 1000, "decel": 2000},
+            "motor2": {"type": "driveToPosition", "position": 4500, "speed": 2500, "accel": 1000, "decel": 2000},
             "completionMode": "waitForBoth",
             "timeoutS": 15.0
         },
@@ -17,8 +17,8 @@
         },
         {
             "name": "Drop",
-            "motor1": {"type": "driveToPosition", "position": 1000, "speed": 5000, "accel": 10000, "decel": 5000},
-            "motor2": {"type": "driveToPosition", "position": 1000, "speed": 5000, "accel": 10000, "decel": 5000},
+            "motor1": {"type": "driveToPosition", "position": 500, "speed": 5000, "accel": 10000, "decel": 5000},
+            "motor2": {"type": "driveToPosition", "position": 500, "speed": 5000, "accel": 10000, "decel": 5000},
             "completionMode": "waitForBoth",
             "timeoutS": 10.0
         }
