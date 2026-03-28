@@ -517,9 +517,9 @@ class RCC:
         elif state == SustainedSwitchState.OFF:
             logger.info("Key switch → OFF")
 
-            if self.__state == RCCState.IDLE:
+            if self.__state in (RCCState.IDLE, RCCState.MAINTENANCE):
                 self.__setState(RCCState.OFF)
-            # Per spec: if ride is active (not IDLE), no action is taken
+            # Per spec: if ride is active, no action is taken
 
     def __onMaintenanceJogSwitch(self, state: MomentarySwitchState) -> None:
         if self.__state != RCCState.MAINTENANCE:
