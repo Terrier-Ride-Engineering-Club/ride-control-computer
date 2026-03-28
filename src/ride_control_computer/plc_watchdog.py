@@ -291,6 +291,18 @@ class PLCWatchdog:
                 if self._serial and self._serial.is_open:
                     self._serial.close()
                 self._serial = None
+            except struct.error as e:
+                mc = self._mc
+                speeds    = mc.getMotorSpeeds()
+                positions = mc.getMotorPositions()
+                currents  = mc.getMotorCurrents()
+                m1Cmd     = mc.getLastMotorCommand(1)
+                m2Cmd     = mc.getLastMotorCommand(2)
+                logger.error(
+                    f"PLCWatchdog pack error: {e} | "
+                    f"speeds={speeds} positions={positions} currents={currents} "
+                    f"m1Cmd={m1Cmd} m2Cmd={m2Cmd}"
+                )
             except Exception as e:
                 logger.error(f"PLCWatchdog loop error: {e}")
 
