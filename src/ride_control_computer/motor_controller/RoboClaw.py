@@ -193,10 +193,10 @@ class RoboClaw:
                 - direction: "Forward" or "Backward"
         """
         cmd = Cmd.GETM1SPEED if motor == 1 else Cmd.GETM2SPEED
-        speed, status = self._read(cmd, '>IB')
+        speed, status = self._read(cmd, '>iB')
         return {
             "speed": speed,
-            "direction": "Backward" if status else "Forward"
+            "direction": "Backward" if speed < 0 else "Forward"
         }
 
     def read_range(self, motor: int) -> tuple:
