@@ -363,12 +363,12 @@ class PLCWatchdog:
         # Ride state enum integer value (matches PLC spec table)
         rideStateVal = rccState.value
 
-        # Limit switch byte: bits 0-3 map to T1-Top, T1-Bot, T2-Top, T2-Bot
+        # Limit switch byte: bits 0-3 map to T1-bot, T1-top, T2-bot, T2-top
         limitByte = 0
-        if mc.isAtTopLimit(1):    limitByte |= 0x01
-        if mc.isAtBottomLimit(1): limitByte |= 0x02
-        if mc.isAtTopLimit(2):    limitByte |= 0x04
-        if mc.isAtBottomLimit(2): limitByte |= 0x08
+        if mc.isAtBottomLimit(1): limitByte |= 0x01
+        if mc.isAtTopLimit(1):    limitByte |= 0x02
+        if mc.isAtBottomLimit(2): limitByte |= 0x04
+        if mc.isAtTopLimit(2):    limitByte |= 0x08
 
         return struct.pack(
             _TX_PAYLOAD_FMT,
