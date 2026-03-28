@@ -12,7 +12,7 @@
         <h5 class="mb-0 me-2">System Status</h5>
         <span id="rcc-badge" class="badge bg-{{ rcc_colors.get(rcc_state, 'secondary') }} fs-6">RCC: {{ rcc_state }}</span>
         <span id="mc-badge"  class="badge bg-{{ 'success' if mc_connected else 'danger' }} fs-6">MC: {{ 'CONNECTED' if mc_connected else 'DISCONNECTED' }}</span>
-        {% set wd_color = {'OK': 'success', 'TIMEOUT': 'danger', 'PLC_ERROR': 'warning', 'DISCONNECTED': 'danger', 'DISABLED': 'secondary'} %}
+        {% set wd_color = {'OK': 'success', 'TIMEOUT': 'danger', 'PLC_ERROR': 'warning', 'DISCONNECTED': 'danger', 'DISABLED': 'secondary', 'INHIBITED': 'secondary'} %}
         <span id="wd-badge" class="badge bg-{{ wd_color.get(watchdog, 'secondary') }} fs-6">WD: {{ watchdog }}</span>
         <form action="/shutdown" method="post" class="ms-auto" onsubmit="return confirm('Shut down the RCC process?')">
             <button type="submit" class="btn btn-sm btn-outline-danger">Exit</button>
@@ -204,7 +204,7 @@ setInterval(async () => {
     mcBadge.classList.add(data.mc_connected ? 'bg-success' : 'bg-danger');
     mcBadge.innerText = 'MC: ' + (data.mc_connected ? 'CONNECTED' : 'DISCONNECTED');
 
-    const wdColors = { 'OK': 'success', 'TIMEOUT': 'danger', 'PLC_ERROR': 'warning', 'DISCONNECTED': 'warning', 'DISABLED': 'secondary' };
+    const wdColors = { 'OK': 'success', 'TIMEOUT': 'danger', 'PLC_ERROR': 'warning', 'DISCONNECTED': 'warning', 'DISABLED': 'secondary', 'INHIBITED': 'secondary' };
     const wdBadge = document.getElementById("wd-badge");
     allColors.forEach(c => wdBadge.classList.remove('bg-' + c));
     wdBadge.classList.add('bg-' + (wdColors[data.watchdog] || 'secondary'));
@@ -265,7 +265,7 @@ setInterval(async () => {
         "bg-warning", "bg-secondary", "border-warning");
 
     const wd = data.watchdog_details || {};
-    const wdHeaderColors = { 'OK': 'success', 'TIMEOUT': 'danger', 'PLC_ERROR': 'warning', 'DISCONNECTED': 'warning', 'DISABLED': 'secondary' };
+    const wdHeaderColors = { 'OK': 'success', 'TIMEOUT': 'danger', 'PLC_ERROR': 'warning', 'DISCONNECTED': 'warning', 'DISABLED': 'secondary', 'INHIBITED': 'secondary' };
     const wdHeader = document.getElementById("wd-card-header");
     allColors.forEach(c => wdHeader.classList.remove('bg-' + c));
     wdHeader.classList.add('bg-' + (wdHeaderColors[wd.status] || 'secondary'));

@@ -403,7 +403,7 @@ class RCC:
         return self.__telemetryLogger
 
     def getWatchdogStatus(self) -> str:
-        """Returns watchdog status as a display string: DISABLED, DISCONNECTED, OK, PLC_ERROR, or TIMEOUT."""
+        """Returns watchdog status as a display string: DISABLED, DISCONNECTED, OK, INHIBITED, PLC_ERROR, or TIMEOUT."""
         if self.__watchdog is None:
             return "DISABLED"
         details = self.__watchdog.getDetails()
@@ -412,6 +412,9 @@ class RCC:
         if self.__watchdog.isTimedOut():
             return "TIMEOUT"
         if not self.__watchdog.isPlcOk():
+            # In OFF state the PLC intentionally clears its OK bit to inhibit motion — expected behavior.
+            if self.__state == RCCState.OFF:
+                return "INHIBITED"
             return "PLC_ERROR"
         return "OK"
 
