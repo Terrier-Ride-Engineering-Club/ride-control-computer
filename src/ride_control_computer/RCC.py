@@ -144,7 +144,7 @@ class RCC:
 
         self._stopEvent = threading.Event()
 
-        self.__state = RCCState.IDLE
+        self.__state = RCCState.OFF
         self.__preEstopState = RCCState.IDLE
         self.__lastEstopFaults: list[dict] = []
 
