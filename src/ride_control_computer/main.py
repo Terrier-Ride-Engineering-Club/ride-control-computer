@@ -58,10 +58,8 @@ def main():
         from ride_control_computer.motor_controller.RoboClawSerialMC import RoboClawSerialMotorController
 
         ROBOCLAW_PORTS = [
-            '/dev/roboclaw',  # udev symlink (preferred)
+            '/dev/roboclaw',  # udev symlink
             '/dev/ttyAMA1',   # Pi GPIO serial (fallback)
-            '/dev/ttyACM0',   # USB fallback
-            '/dev/ttyACM1',   # USB fallback
         ]
         WATCHDOG_PORT = None if args.no_watchdog else '/dev/plc-watchdog'  # udev symlink for Arduino (PLC)
 
