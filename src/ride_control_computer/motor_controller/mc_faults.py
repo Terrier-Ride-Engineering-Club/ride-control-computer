@@ -76,5 +76,5 @@ def registerMotorControllerFaults(
         code="MC_MOTOR2_LIMIT_SWITCH_VIOLATION",
         severity=FaultSeverity.HIGH,
         description="Limit switches both active on tower 2",
-        condition=lambda: isMotor1AtTopLimit() and isMotor2AtBottomLimit()
+        condition=lambda: isMotor2AtTopLimit() and isMotor2AtBottomLimit()
     ))
