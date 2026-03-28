@@ -179,6 +179,7 @@ class PLCWatchdog:
                 baudrate=self._baud,
                 timeout=0.001,   # 1 ms read timeout — effectively non-blocking
             )
+            self._serial.reset_input_buffer()
             logger.info(f"PLCWatchdog opened on {self._port} @ {self._baud} baud")
             # Reset communication state so the grace period and counter checks restart cleanly
             self._lastValidPacketTime = time.monotonic()
@@ -423,6 +424,7 @@ class PLCWatchdog:
             self._rxBuffer += self._serial.read(waiting)
 
         # Parse as many complete 10-byte packets as are available
+        consecutiveCrcErrors = 0
         while len(self._rxBuffer) >= _RX_SIZE:
             raw     = self._rxBuffer[:_RX_SIZE]
             payload = raw[:-2]
@@ -431,7 +433,20 @@ class PLCWatchdog:
             if _crc16(payload) == receivedCrc:
                 self._processPacket(payload)
                 self._rxBuffer = self._rxBuffer[_RX_SIZE:]
+                consecutiveCrcErrors = 0
             else:
+                consecutiveCrcErrors += 1
+                if consecutiveCrcErrors >= _RX_SIZE:
+                    # Shifted through an entire packet worth of bytes without finding a valid
+                    # frame boundary — the buffer is hopelessly misaligned. Discard everything
+                    # and re-sync from the next fresh read.
+                    logger.warning(
+                        f"PLCWatchdog: RX buffer desync — discarding {len(self._rxBuffer)} bytes to re-sync"
+                    )
+                    self._rxBuffer = b''
+                    if self._serial and self._serial.is_open:
+                        self._serial.reset_input_buffer()
+                    break
                 # CRC mismatch: shift one byte to re-find packet boundary
                 logger.warning(
                     f"PLCWatchdog: CRC mismatch — re-syncing RX buffer "
