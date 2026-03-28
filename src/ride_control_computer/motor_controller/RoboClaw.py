@@ -104,9 +104,6 @@ class RoboClaw:
         else:
             raise ValueError(f"Motor #{motor} is not valid!")
 
-        if speed > 2000 or acceleration > 500 or deceleration > 500:
-            raise ValueError(f"Value too great! spd: {speed}, acc: {acceleration}, dec: {deceleration}")
-
         # Format: '>IiIiB' = accel(U4), speed(S4), decel(U4), position(S4), buffer(U1)
         self._write(cmd, '>IiIiB', acceleration, speed, deceleration, position, buffer)
 
