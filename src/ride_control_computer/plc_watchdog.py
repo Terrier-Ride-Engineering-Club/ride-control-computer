@@ -90,7 +90,7 @@ class PLCWatchdog:
     DEFAULT_BAUD        = 115200
     DEFAULT_TIMEOUT     = 0.5    # seconds before watchdog fires
     DEFAULT_INTERVAL    = 0.01   # 10 ms transmit interval
-    RECONNECT_INTERVAL  = 5.0    # seconds between reconnection attempts
+    RECONNECT_INTERVAL  = 2.0    # seconds between reconnection attempts
 
     def __init__(
         self,
@@ -410,7 +410,10 @@ class PLCWatchdog:
                 self._rxBuffer = self._rxBuffer[_RX_SIZE:]
             else:
                 # CRC mismatch: shift one byte to re-find packet boundary
-                logger.debug("PLCWatchdog: CRC mismatch — re-syncing RX buffer")
+                logger.warning(
+                    f"PLCWatchdog: CRC mismatch — re-syncing RX buffer "
+                    f"(raw={raw.hex()}, expected={_crc16(payload):#06x}, got={receivedCrc:#06x})"
+                )
                 self._rxBuffer = self._rxBuffer[1:]
 
     def _processPacket(self, payload: bytes) -> None:
@@ -422,7 +425,7 @@ class PLCWatchdog:
         if not self._firstPacket:
             delta = (plcCounter - self._plcCounter) & 0xFFFF
             if delta == 0:
-                logger.debug("PLCWatchdog: duplicate PLC counter — ignoring packet")
+                logger.warning(f"PLCWatchdog: duplicate PLC counter ({plcCounter}) — ignoring packet")
                 return
             if delta >= 0x8000:
                 logger.warning(
