@@ -55,7 +55,8 @@ _PLC_BIT_LEVEL0_FAULT     = 0x20   # bit 5: relay cut — terminal, requires key
 _PLC_BIT_ECHO_FAULT       = 0x40   # bit 6: RCC not echoing PLC counter within allowed lag
 _PLC_BIT_MOTION_FAULT     = 0x80   # bit 7: motion envelope violation (motor speed > 9500 QPPS)
 
-# RCCState.FAULT value — used to set I'M OK = False without importing RCC.py
+# RCCState values — used to set status bits without importing RCC.py
+_RCC_ESTOP_VALUE = 5
 _RCC_FAULT_VALUE = 6
 
 
@@ -285,9 +286,8 @@ class PLCWatchdog:
 
             try:
                 self._sendPacket()
-                self._receivePackets()
             except serial.SerialException as e:
-                logger.error(f"PLCWatchdog serial error: {e} — will retry in {self.RECONNECT_INTERVAL}s")
+                logger.error(f"PLCWatchdog serial error (send): {e} — will retry in {self.RECONNECT_INTERVAL}s")
                 if self._serial and self._serial.is_open:
                     self._serial.close()
                 self._serial = None
@@ -304,7 +304,17 @@ class PLCWatchdog:
                     f"m1Cmd={m1Cmd} m2Cmd={m2Cmd}"
                 )
             except Exception as e:
-                logger.error(f"PLCWatchdog loop error: {e}")
+                logger.error(f"PLCWatchdog send error: {e}")
+
+            try:
+                self._receivePackets()
+            except serial.SerialException as e:
+                logger.error(f"PLCWatchdog serial error (recv): {e} — will retry in {self.RECONNECT_INTERVAL}s")
+                if self._serial and self._serial.is_open:
+                    self._serial.close()
+                self._serial = None
+            except Exception as e:
+                logger.error(f"PLCWatchdog recv error: {e}")
 
             elapsed = time.monotonic() - loopStart
             remaining = self._intervalS - elapsed
@@ -330,8 +340,9 @@ class PLCWatchdog:
         rccState = self._getRccState()
 
         # Status bits
-        estopActive = mc.isEstopActive()
-        imOk = rccState.value != _RCC_FAULT_VALUE
+        # E-Stop is active if the MC hardware reports it OR the RCC is in a software ESTOP/FAULT state
+        estopActive = mc.isEstopActive() or rccState.value in (_RCC_ESTOP_VALUE, _RCC_FAULT_VALUE)
+        imOk = rccState.value not in (_RCC_ESTOP_VALUE, _RCC_FAULT_VALUE)
         statusBits = 0
         if estopActive:
             statusBits |= _BIT_ESTOP | _BIT_ESTOP2
