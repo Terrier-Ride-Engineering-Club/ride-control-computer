@@ -466,11 +466,7 @@ class RCC:
             if self.__state != RCCState.ESTOP:
                 return
 
-            if self.__motorController.isEstopActive():
-                logger.warning("Cannot reset: hardware E-Stop still active")
-                return
-
-            logger.info("Hardware E-Stop cleared — entering RESETTING")
+            logger.info("Reset accepted — entering RESETTING")
             self.__setState(RCCState.RESETTING)
 
     def __onStop(self, state: MomentaryButtonState) -> None:
