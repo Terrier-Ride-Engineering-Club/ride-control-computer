@@ -44,7 +44,7 @@ else
     echo "Starting RCC in kiosk mode..."
 
     # Start the RCC service with hardware implementations
-    .venv/bin/rcc --hardware --no-watchdog &
+    .venv/bin/rcc --hardware &
     RCC_PID=$!
 
     # Wait for webserver to be ready
