@@ -260,10 +260,12 @@ class RCC:
             self.__motorController.homeMotors()
             self.__themingController.stopShow()
         elif newState == RCCState.IDLE:
+            self.__lastEstopFaults = []
             self.__motorController.clearCommand()
+        elif newState == RCCState.MAINTENANCE:
+            self.__lastEstopFaults = []
         elif newState == RCCState.RESETTING:
             self.__stateEntryTime = time.monotonic()
-            self.__lastEstopFaults = []
             self.__motorController.clearCommand()
         elif newState == RCCState.FAULT:
             # The safety PLC will cut ride power immediately on FAULT entry,
