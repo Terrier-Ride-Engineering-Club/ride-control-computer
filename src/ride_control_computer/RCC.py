@@ -253,7 +253,7 @@ class RCC:
         elif newState == RCCState.ESTOP:
             self.__preEstopState = oldState
             self.__rideTimer.startEstop()
-            self.__motorController.haltMotion()
+            self.__motorController.clearCommand()
             self.__themingController.stopShow()
         elif newState == RCCState.STOPPING:
             self.__stateEntryTime = time.monotonic()
