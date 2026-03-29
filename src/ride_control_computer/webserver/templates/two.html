@@ -341,7 +341,7 @@ setInterval(async () => {
     document.getElementById("wd-plc-ok").innerText       = wd.plcOk != null ? String(wd.plcOk) : '—';
     document.getElementById("wd-age").innerText          = wd.timeSinceLastPacket ?? '—';
 
-}, 1000);
+}, 200);
 </script>
 
 {% endblock %}
