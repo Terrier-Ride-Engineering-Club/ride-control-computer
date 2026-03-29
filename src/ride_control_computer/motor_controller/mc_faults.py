@@ -62,7 +62,7 @@ def registerMotorControllerFaults(
     ))
     monitor.register(Fault(
         code="MC_UNEXPECTED_MOTION",
-        severity=FaultSeverity.MEDIUM,
+        severity=FaultSeverity.HIGH,
         description="Motor motion detected while system is idle",
         condition=lambda: isMotionForbidden() and any(abs(s) > 10 for s in mc.getMotorSpeeds()),
     ))
