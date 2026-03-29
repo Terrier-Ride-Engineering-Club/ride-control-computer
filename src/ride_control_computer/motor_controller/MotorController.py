@@ -269,6 +269,13 @@ class MotorController(ABC):
         """
         ...
 
+    def getCurrentCommand(self) -> dict | None:
+        """
+        Returns a dict describing the active command being sent to the hardware,
+        or None if not implemented by this motor controller.
+        """
+        return None
+
     @property
     def loopTimer(self) -> Optional[LoopTimer]:
         """Returns the telemetry loop timer, or None if not implemented by child."""

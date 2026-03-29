@@ -6,8 +6,8 @@ from waitress import serve
 
 class MockWebserverController(WebserverController):
 
-    def __init__(self, getSpeeds, getState, startTheming, stopTheming, themeStatus, getPositions, getCurrents, getVoltage, getTemperatures, isTelemetryStale=lambda: True, getLimitSwitches=lambda: {"m1_top": False, "m1_bottom": False, "m2_top": False, "m2_bottom": False}, getMCStatusString=lambda: "Unknown"):
-        super().__init__(getSpeeds, getState, startTheming, stopTheming, themeStatus, getPositions, getCurrents, getVoltage, getTemperatures, isTelemetryStale, getLimitSwitches, getMCStatusString)
+    def __init__(self, getSpeeds, getState, startTheming, stopTheming, themeStatus, getPositions, getCurrents, getVoltage, getTemperatures, isTelemetryStale=lambda: True, getLimitSwitches=lambda: {"m1_top": False, "m1_bottom": False, "m2_top": False, "m2_bottom": False}, getMCStatusString=lambda: "Unknown", getMotorCommand=lambda: None):
+        super().__init__(getSpeeds, getState, startTheming, stopTheming, themeStatus, getPositions, getCurrents, getVoltage, getTemperatures, isTelemetryStale, getLimitSwitches, getMCStatusString, getMotorCommand)
 
     def _compute_four_data(self):
         if self.rcc is None:
@@ -214,6 +214,7 @@ class MockWebserverController(WebserverController):
             limits = self.getLimitSwitches()
             mc_status_string = self.getMCStatusString()
             panel_inputs = self._panel.getInputStates() if self._panel else None
+            motor_command = self.getMotorCommand()
             return render_template("two.html",
                 rcc_state=rcc_state,
                 mc_connected=mc_connected,
@@ -232,6 +233,7 @@ class MockWebserverController(WebserverController):
                 limits=limits,
                 mc_status_string=mc_status_string,
                 panel_inputs=panel_inputs,
+                motor_command=motor_command,
             )
 
         @self.app.route('/two-data')
@@ -257,6 +259,7 @@ class MockWebserverController(WebserverController):
             limits = self.getLimitSwitches()
             mc_status_string = self.getMCStatusString()
             panel_inputs = self._panel.getInputStates() if self._panel else None
+            motor_command = self.getMotorCommand()
             return jsonify({
                 "rcc_state": rcc_state,
                 "mc_connected": mc_connected,
@@ -278,6 +281,7 @@ class MockWebserverController(WebserverController):
                 "limits": limits,
                 "mc_status_string": mc_status_string,
                 "panel_inputs": panel_inputs,
+                "motor_command": motor_command,
             })
 
         @self.app.route("/shutdown", methods=["POST"])

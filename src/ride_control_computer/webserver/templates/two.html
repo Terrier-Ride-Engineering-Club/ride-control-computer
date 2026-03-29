@@ -167,6 +167,32 @@
     </div>
 </div>
 
+<!-- ===== MOTOR COMMAND ===== -->
+<div class="card shadow mb-4">
+    <div class="card-header fw-bold">Motor Controller Command</div>
+    <div class="card-body p-0">
+        <table class="table table-sm table-bordered mb-0" id="motorCommandTable">
+            <thead class="table-dark"><tr><th>Field</th><th>Value</th></tr></thead>
+            <tbody id="motorCommandBody">
+                {% if motor_command %}
+                <tr><td>Type</td><td><span class="badge bg-primary">{{ motor_command.type }}</span></td></tr>
+                {% if motor_command.type == 'JOG' %}
+                <tr><td>Direction</td><td>{{ motor_command.jogDir }}</td></tr>
+                {% elif motor_command.type == 'DRIVE' %}
+                {% for mnum, params in motor_command.drive.items() %}
+                <tr><td>M{{ mnum }} Target</td><td>{{ params.position }} @ {{ params.speed }} QPPS</td></tr>
+                {% endfor %}
+                {% elif motor_command.type == 'STOP' %}
+                <tr><td>Decel</td><td>{{ motor_command.decel }}</td></tr>
+                {% endif %}
+                {% else %}
+                <tr><td colspan="2" class="text-muted text-center">Unavailable</td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
 <!-- ===== CONTROL PANEL INPUTS ===== -->
 <div class="card shadow mb-4" id="panelInputsCard">
     <div class="card-header fw-bold">Control Panel Inputs</div>
@@ -324,6 +350,26 @@ setInterval(async () => {
             const jsCls = js === "NEUTRAL" ? "secondary" : "primary";
             html += `<tr><td>Jog Switch</td><td><span class="badge bg-${jsCls}">${js}</span></td></tr>`;
             tbody.innerHTML = html;
+        }
+    }
+
+    const mc = data.motor_command;
+    const mcCmdBody = document.getElementById("motorCommandBody");
+    if (mcCmdBody) {
+        if (!mc) {
+            mcCmdBody.innerHTML = '<tr><td colspan="2" class="text-muted text-center">Unavailable</td></tr>';
+        } else {
+            let html = `<tr><td>Type</td><td><span class="badge bg-primary">${mc.type}</span></td></tr>`;
+            if (mc.type === "JOG") {
+                html += `<tr><td>Direction</td><td>${mc.jogDir > 0 ? "UP" : mc.jogDir < 0 ? "DOWN" : "0"}</td></tr>`;
+            } else if (mc.type === "DRIVE" && mc.drive) {
+                for (const [mnum, p] of Object.entries(mc.drive)) {
+                    html += `<tr><td>M${mnum} Target</td><td>${p.position} @ ${p.speed} QPPS</td></tr>`;
+                }
+            } else if (mc.type === "STOP") {
+                html += `<tr><td>Decel</td><td>${mc.decel}</td></tr>`;
+            }
+            mcCmdBody.innerHTML = html;
         }
     }
 

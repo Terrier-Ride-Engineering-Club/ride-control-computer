@@ -20,6 +20,7 @@ class WebserverController(ABC):
                  isTelemetryStale: Callable[[], bool] = lambda: True,
                  getLimitSwitches: Callable[[], dict] = lambda: {"m1_top": False, "m1_bottom": False, "m2_top": False, "m2_bottom": False},
                  getMCStatusString: Callable[[], str] = lambda: "Unknown",
+                 getMotorCommand: Callable[[], dict | None] = lambda: None,
                  ):
         self.app = Flask(__name__)
         self.getSpeed = getSpeeds
@@ -34,6 +35,7 @@ class WebserverController(ABC):
         self.getTemperatures = getTemperatures
         self.getLimitSwitches = getLimitSwitches
         self.getMCStatusString = getMCStatusString
+        self.getMotorCommand = getMotorCommand
         self.rcc = None
         self._panel = None
 

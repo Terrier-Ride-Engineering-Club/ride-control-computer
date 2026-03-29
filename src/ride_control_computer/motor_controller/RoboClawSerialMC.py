@@ -371,6 +371,20 @@ class RoboClawSerialMotorController(MotorController):
         if self.getControllerStatus() != "Normal":         return
         self._setState(MotorControllerState.ACTIVE)
 
+    def getCurrentCommand(self) -> dict:
+        with self._commandLock:
+            cmd = {"type": self._commandType.name}
+            if self._commandType == _CommandType.JOG:
+                cmd["jogDir"] = self._commandJogDir
+            elif self._commandType == _CommandType.DRIVE:
+                cmd["drive"] = {
+                    str(m): {"position": p, "speed": s, "accel": a, "decel": d}
+                    for m, (p, s, a, d) in self._commandDrive.items()
+                }
+            elif self._commandType == _CommandType.STOP:
+                cmd["decel"] = self._commandDecel
+            return cmd
+
     # =========================================================================
     #                           CONTROL LOOP
     # =========================================================================
