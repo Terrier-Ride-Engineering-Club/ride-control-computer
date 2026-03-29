@@ -3,7 +3,7 @@ from enum import Enum, auto
 from time import sleep
 from typing import Callable
 
-from gpiozero import Button, LED
+from gpiozero import Button, LED, OutputDevice
 
 from ride_control_computer.RCC import RCCState
 from ride_control_computer.control_panel.ControlPanel import (
@@ -29,6 +29,7 @@ PIN_JOG_DOWN = 22            # Jog switch "DOWN" position
 PIN_DISPATCH_LED = 6
 PIN_RESET_LED    = 19
 PIN_STOP_LED     = 26
+PIN_ESTOP_ENABLE = 16  # HIGH = motion permitted (IDLE/RUNNING); LOW = motion inhibited
 
 DEBOUNCE_TIME       = 0.05  # 50ms debounce
 BLINK_PERIOD_S      = 0.5   # on_time and off_time for standard blinking LEDs
@@ -153,9 +154,12 @@ class HardwareControlPanel(ControlPanel):
         )
 
         # Indicator LEDs — paired to their respective buttons for press-override
-        self._dispatchLED = _ButtonLED(self._buttons[0].btn, PIN_DISPATCH_LED)
-        self._resetLED    = _ButtonLED(self._buttons[1].btn, PIN_RESET_LED)
-        self._stopLED     = _ButtonLED(self._buttons[2].btn, PIN_STOP_LED)
+        self._dispatchLED   = _ButtonLED(self._buttons[0].btn, PIN_DISPATCH_LED)
+        self._resetLED      = _ButtonLED(self._buttons[1].btn, PIN_RESET_LED)
+        self._stopLED       = _ButtonLED(self._buttons[2].btn, PIN_STOP_LED)
+
+        # E-Stop enable output — driven LOW at init until RCC confirms a safe state
+        self._estopEnable = OutputDevice(PIN_ESTOP_ENABLE, initial_value=False)
 
         logger.info("HardwareControlPanel initialized (pins: dispatch=%d, reset=%d, stop=%d, estop=%d, "
                      "maint_on=%d, maint_maint=%d, jog_up=%d, jog_down=%d)",
@@ -187,6 +191,16 @@ class HardwareControlPanel(ControlPanel):
         self._stopLED.setMode(
             _LEDMode.BLINK_FAST if state == RCCState.STOPPING else _LEDMode.OFF
         )
+
+    def getInputStates(self) -> dict:
+        return {
+            "dispatch":    self._buttons[0].btn.is_pressed,
+            "reset":       self._buttons[1].btn.is_pressed,
+            "stop":        self._buttons[2].btn.is_pressed,
+            "estop":       self._buttons[3].btn.is_pressed,
+            "powerSwitch": self._maintSwitch.read().name,
+            "jogSwitch":   self._jogSwitch.read().name,
+        }
 
     def run(self) -> None:
         # Read initial switch states so we don't fire spurious callbacks on startup

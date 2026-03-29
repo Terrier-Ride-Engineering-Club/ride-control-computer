@@ -213,6 +213,7 @@ class MockWebserverController(WebserverController):
 
             limits = self.getLimitSwitches()
             mc_status_string = self.getMCStatusString()
+            panel_inputs = self._panel.getInputStates() if self._panel else None
             return render_template("two.html",
                 rcc_state=rcc_state,
                 mc_connected=mc_connected,
@@ -230,6 +231,7 @@ class MockWebserverController(WebserverController):
                 last_estop_faults=last_estop_faults,
                 limits=limits,
                 mc_status_string=mc_status_string,
+                panel_inputs=panel_inputs,
             )
 
         @self.app.route('/two-data')
@@ -254,6 +256,7 @@ class MockWebserverController(WebserverController):
             watchdog_details = self.rcc.getWatchdogDetails() if self.rcc else {"status": "DISABLED"}
             limits = self.getLimitSwitches()
             mc_status_string = self.getMCStatusString()
+            panel_inputs = self._panel.getInputStates() if self._panel else None
             return jsonify({
                 "rcc_state": rcc_state,
                 "mc_connected": mc_connected,
@@ -274,6 +277,7 @@ class MockWebserverController(WebserverController):
                 "last_estop_faults": last_estop_faults,
                 "limits": limits,
                 "mc_status_string": mc_status_string,
+                "panel_inputs": panel_inputs,
             })
 
         @self.app.route("/shutdown", methods=["POST"])

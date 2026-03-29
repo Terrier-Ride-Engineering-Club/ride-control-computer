@@ -167,6 +167,44 @@
     </div>
 </div>
 
+<!-- ===== CONTROL PANEL INPUTS ===== -->
+<div class="card shadow mb-4" id="panelInputsCard">
+    <div class="card-header fw-bold">Control Panel Inputs</div>
+    <div class="card-body p-0">
+        {% if panel_inputs is none %}
+        <div class="text-muted text-center p-3" id="panelInputsUnavailable">Panel not available</div>
+        {% else %}
+        <table class="table table-sm table-bordered mb-0" id="panelInputsTable">
+            <thead class="table-dark">
+                <tr><th>Input</th><th>State</th></tr>
+            </thead>
+            <tbody id="panelInputsBody">
+                {% set btn_inputs = [
+                    ('Dispatch', panel_inputs.dispatch),
+                    ('Reset',    panel_inputs.reset),
+                    ('Stop',     panel_inputs.stop),
+                    ('E-Stop',   panel_inputs.estop),
+                ] %}
+                {% for label, pressed in btn_inputs %}
+                <tr>
+                    <td>{{ label }}</td>
+                    <td><span class="badge bg-{{ 'warning text-dark' if pressed else 'secondary' }}">{{ 'PRESSED' if pressed else 'released' }}</span></td>
+                </tr>
+                {% endfor %}
+                <tr>
+                    <td>Power Switch</td>
+                    <td><span class="badge bg-{% if panel_inputs.powerSwitch == 'ON' %}success{% elif panel_inputs.powerSwitch == 'MAINTENANCE' %}info{% else %}secondary{% endif %}">{{ panel_inputs.powerSwitch }}</span></td>
+                </tr>
+                <tr>
+                    <td>Jog Switch</td>
+                    <td><span class="badge bg-{% if panel_inputs.jogSwitch == 'NEUTRAL' %}secondary{% else %}primary{% endif %}">{{ panel_inputs.jogSwitch }}</span></td>
+                </tr>
+            </tbody>
+        </table>
+        {% endif %}
+    </div>
+</div>
+
 <!-- ===== CONSOLE ===== -->
 {% if console %}
 <div class="card shadow">
@@ -263,6 +301,31 @@ setInterval(async () => {
         "bg-danger", "bg-secondary", "border-danger");
     renderFaultTable("lastEstopBody", "lastEstopCard", data.last_estop_faults || [], "No E-Stop recorded this session",
         "bg-warning", "bg-secondary", "border-warning");
+
+    const pi = data.panel_inputs;
+    const panelUnavailable = document.getElementById("panelInputsUnavailable");
+    const panelTable = document.getElementById("panelInputsTable");
+    if (pi) {
+        if (panelUnavailable) panelUnavailable.style.display = "none";
+        if (panelTable) panelTable.style.display = "";
+        const tbody = document.getElementById("panelInputsBody");
+        if (tbody) {
+            const btnLabels = ["Dispatch", "Reset", "Stop", "E-Stop"];
+            const btnKeys   = ["dispatch", "reset", "stop", "estop"];
+            let html = "";
+            for (let i = 0; i < btnLabels.length; i++) {
+                const pressed = pi[btnKeys[i]];
+                html += `<tr><td>${btnLabels[i]}</td><td><span class="badge bg-${pressed ? 'warning text-dark' : 'secondary'}">${pressed ? 'PRESSED' : 'released'}</span></td></tr>`;
+            }
+            const ps = pi.powerSwitch || "OFF";
+            const psCls = ps === "ON" ? "success" : ps === "MAINTENANCE" ? "info" : "secondary";
+            html += `<tr><td>Power Switch</td><td><span class="badge bg-${psCls}">${ps}</span></td></tr>`;
+            const js = pi.jogSwitch || "NEUTRAL";
+            const jsCls = js === "NEUTRAL" ? "secondary" : "primary";
+            html += `<tr><td>Jog Switch</td><td><span class="badge bg-${jsCls}">${js}</span></td></tr>`;
+            tbody.innerHTML = html;
+        }
+    }
 
     const wd = data.watchdog_details || {};
     const wdHeaderColors = { 'OK': 'success', 'TIMEOUT': 'danger', 'PLC_ERROR': 'warning', 'DISCONNECTED': 'warning', 'DISABLED': 'secondary', 'INHIBITED': 'secondary' };

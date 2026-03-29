@@ -111,6 +111,13 @@ class ControlPanel(ABC):
         """
         pass
 
+    def getInputStates(self) -> dict | None:
+        """
+        Return the live state of all physical inputs, or None if unavailable.
+        Hardware implementations should override this to return real GPIO values.
+        """
+        return None
+
     @property
     def loopTimer(self) -> LoopTimer:
         return self._loop_timer
