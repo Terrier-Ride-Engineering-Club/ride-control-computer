@@ -269,6 +269,10 @@ class MotorController(ABC):
         """
         ...
 
+    def clearCommand(self) -> None:
+        """Stop re-sending any command to the hardware. No-op by default."""
+        pass
+
     def getCurrentCommand(self) -> dict | None:
         """
         Returns a dict describing the active command being sent to the hardware,

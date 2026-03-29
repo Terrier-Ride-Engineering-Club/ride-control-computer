@@ -31,6 +31,7 @@ logger = logging.getLogger(__name__)
 
 class _CommandType(Enum):
     """Active command the serial thread should re-send each write tick."""
+    NONE  = -1  # No command — serial thread does not send anything
     STOP  = 0   # Decelerate both motors to 0
     JOG   = 1   # Continuous speed on one motor
     DRIVE = 2   # Position command on one or both motors
@@ -57,11 +58,12 @@ class RoboClawSerialMotorController(MotorController):
     HEARTBEAT_TTL      = 0.025  # seconds — must stay above RoboClaw's 20ms timeout
 
     # --- Motion parameters ---
-    JOG_SPEED          = 1100
+    JOG_SPEED          = 300
     JOG_ACCELERATION   = 2000
     STOP_DECELERATION  = 2000
     HALT_DECELERATION  = 10000
-    STOPPED_THRESHOLD  = 5      # QPPS — below this, motors are considered stopped
+    STOPPED_THRESHOLD              = 5    # QPPS — below this, motors are considered stopped
+    VELOCITY_TO_POSITION_LOCKOUT_S = 0.4  # seconds to wait after last velocity command before allowing DRIVE
 
     def __init__(self, ports: list[str], address: int = 0x80):
         """
@@ -82,7 +84,7 @@ class RoboClawSerialMotorController(MotorController):
 
         # --- Pending command (main thread writes, serial thread reads) ---
         self._commandLock = Lock()
-        self._commandType: _CommandType   = _CommandType.STOP
+        self._commandType: _CommandType   = _CommandType.NONE
         self._commandDecel: int           = self.STOP_DECELERATION
         self._commandJogDir: int          = 0
         # Per-motor drive params: motor → (position, speed, accel, decel)
@@ -93,6 +95,10 @@ class RoboClawSerialMotorController(MotorController):
         # Reset by homeMotors() at the start of each homing sequence.
         # Reset per-motor in the JOG branch when the motor leaves the bottom limit.
         self._bottomResetDone: dict[int, bool] = {1: False, 2: False}
+        # Tracks the last time a velocity command was executed; DRIVE is blocked
+        # for VELOCITY_TO_POSITION_LOCKOUT_S after any velocity command to prevent
+        # the position PID from seeing accumulated velocity-mode encoder error.
+        self._lastVelocityCmdTime: float = time.monotonic()
 
         # --- Telemetry cache (serial thread writes, any thread reads) ---
         self._telemetry = ControllerTelemetry()
@@ -234,6 +240,10 @@ class RoboClawSerialMotorController(MotorController):
             self._commandType   = _CommandType.JOG
             self._commandJogDir = direction
         return True
+
+    def clearCommand(self) -> None:
+        with self._commandLock:
+            self._commandType = _CommandType.NONE
 
     def stopMotion(self) -> None:
         with self._commandLock:
@@ -466,6 +476,8 @@ class RoboClawSerialMotorController(MotorController):
             return
 
         with self._commandLock:
+            if self._commandType == _CommandType.NONE:
+                return
             cmdType         = self._commandType
             cmdDecel        = self._commandDecel
             cmdJogDir       = self._commandJogDir
@@ -473,6 +485,7 @@ class RoboClawSerialMotorController(MotorController):
             bottomResetDone = dict(self._bottomResetDone)
 
         if cmdType == _CommandType.STOP:
+            self._lastVelocityCmdTime = time.monotonic()
             for motor in [1, 2]:
                 self._roboClaw.set_speed_with_acceleration(motor, 0, cmdDecel)
 
@@ -482,6 +495,7 @@ class RoboClawSerialMotorController(MotorController):
                 atBottom = self._limitCache[motor]["bottom"]
                 atLimit  = (cmdJogDir > 0 and atTop) or (cmdJogDir < 0 and atBottom)
                 speed    = 0 if atLimit else (self.JOG_SPEED if cmdJogDir > 0 else -self.JOG_SPEED)
+                self._lastVelocityCmdTime = time.monotonic()
                 self._roboClaw.set_speed_with_acceleration(motor, speed, self.JOG_ACCELERATION)
 
                 # Encoder reset: fires once per bottom-limit arrival when jogging down.
@@ -499,6 +513,14 @@ class RoboClawSerialMotorController(MotorController):
                         bottomResetDone[motor] = False
 
         elif cmdType == _CommandType.DRIVE:
+            age = time.monotonic() - self._lastVelocityCmdTime
+            if age < self.VELOCITY_TO_POSITION_LOCKOUT_S:
+                logger.error(
+                    "DRIVE blocked: only %.3fs since last velocity command (lockout=%.1fs) — "
+                    "unsafe velocity→position transition",
+                    age, self.VELOCITY_TO_POSITION_LOCKOUT_S,
+                )
+                return
             for motor, (pos, spd, acc, dec) in cmdDrive.items():
                 self._roboClaw.drive_to_position_with_speed_acceleration_deceleration(
                     motor, pos, spd, acc, dec
@@ -509,6 +531,7 @@ class RoboClawSerialMotorController(MotorController):
             m2Home = self._limitCache[2]["bottom"]
             spd1 = 0 if m1Home else -HOMING_SPEED
             spd2 = 0 if m2Home else -HOMING_SPEED
+            self._lastVelocityCmdTime = time.monotonic()
             self._roboClaw.set_speed_with_acceleration(1, spd1, HOMING_ACCELERATION)
             self._roboClaw.set_speed_with_acceleration(2, spd2, HOMING_ACCELERATION)
 

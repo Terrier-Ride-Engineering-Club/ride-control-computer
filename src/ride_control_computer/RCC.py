@@ -255,9 +255,12 @@ class RCC:
             self.__sequencer.abort()
             self.__motorController.homeMotors()
             self.__themingController.stopShow()
+        elif newState == RCCState.IDLE:
+            self.__motorController.clearCommand()
         elif newState == RCCState.RESETTING:
             self.__stateEntryTime = time.monotonic()
             self.__lastEstopFaults = []
+            self.__motorController.clearCommand()
         elif newState == RCCState.FAULT:
             # The safety PLC will cut ride power immediately on FAULT entry,
             # which means the Pi loses power. haltMotion() here is best-effort.
