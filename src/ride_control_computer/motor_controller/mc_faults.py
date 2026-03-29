@@ -33,7 +33,7 @@ def registerMotorControllerFaults(
     isMotor2AtTopLimit: Callable[[], bool],
     isMotor1AtBottomLimit: Callable[[], bool],
     isMotor2AtBottomLimit: Callable[[], bool],
-
+    isResetting: Callable[[], bool] = lambda: False,
 ) -> None:
     """Register all motor-controller-related fault conditions.
 
@@ -48,12 +48,12 @@ def registerMotorControllerFaults(
         description="Motor controller telemetry is stale — communication lost",
         condition=mc.isTelemetryStale,
     ))
-    # monitor.register(Fault(
-    #     code="MC_ESTOP_ACTIVE",
-    #     severity=FaultSeverity.HIGH,
-    #     description="Hardware E-Stop is active on motor controller",
-    #     condition=mc.isEstopActive,
-    # ))
+    monitor.register(Fault(
+        code="MC_ESTOP_ACTIVE",
+        severity=FaultSeverity.HIGH,
+        description="Hardware E-Stop is active on motor controller",
+        condition=lambda: mc.isEstopActive() and not isResetting(),
+    ))
     monitor.register(Fault(
         code="MC_STATUS_ABNORMAL",
         severity=FaultSeverity.HIGH,

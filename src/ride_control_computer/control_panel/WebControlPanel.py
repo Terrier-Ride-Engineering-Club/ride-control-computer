@@ -375,7 +375,7 @@ class WebControlPanel(ControlPanel):
     #                           INDICATOR UPDATE
     # =========================================================================
 
-    def updateIndicators(self, state, hasActiveFaults: bool) -> None:
+    def updateIndicators(self, state, hasActiveFaults: bool, onlyMCEstopFault: bool = False) -> None:
         """Called by the RCC main thread each loop tick. Thread-safe."""
         dispatchMode = _MODE_BLINK if state == RCCState.IDLE else _MODE_OFF
         resetMode    = (

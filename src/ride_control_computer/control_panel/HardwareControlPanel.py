@@ -166,7 +166,7 @@ class HardwareControlPanel(ControlPanel):
                      PIN_DISPATCH, PIN_RESET, PIN_STOP, PIN_ESTOP,
                      PIN_MAINT_ON, PIN_MAINT_MAINTENANCE, PIN_JOG_UP, PIN_JOG_DOWN)
 
-    def updateIndicators(self, state, hasActiveFaults: bool) -> None:
+    def updateIndicators(self, state, hasActiveFaults: bool, onlyMCEstopFault: bool = False) -> None:
         """
         Update the three button indicator LEDs based on RCC state.
 
@@ -176,8 +176,13 @@ class HardwareControlPanel(ControlPanel):
         Stop     — no autonomous blink behavior; press-override still lights it
                    solid while held.
         """
-        # E-Stop enable: permit motion only in IDLE or RUNNING
-        if state in (RCCState.IDLE, RCCState.RUNNING, RCCState.MAINTENANCE):
+        # E-Stop enable: permit motion in normal run states.
+        # Also de-assert during RESETTING, but only if the sole E-Stop cause was
+        # MC_ESTOP_ACTIVE — i.e. the RoboClaw's own E-Stop input (pin 16) was the
+        # reason. De-asserting lets the RoboClaw clear its E-Stop so the fault
+        # monitor can confirm it's gone before transitioning to IDLE.
+        deassertForReset = state == RCCState.RESETTING and onlyMCEstopFault
+        if state in (RCCState.IDLE, RCCState.RUNNING, RCCState.MAINTENANCE) or deassertForReset:
             self._estopEnable.on()
         else:
             self._estopEnable.off()

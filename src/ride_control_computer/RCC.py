@@ -198,7 +198,11 @@ class RCC:
             self.__processInputs()
             self.__updateState()
             self.__monitorSafety()
-            self.__controlPanel.updateIndicators(self.__state, self.__faultMonitor.hasActiveFaults())
+            onlyMCEstop = (
+                len(self.__lastEstopFaults) == 1
+                and self.__lastEstopFaults[0]["code"] == "MC_ESTOP_ACTIVE"
+            )
+            self.__controlPanel.updateIndicators(self.__state, self.__faultMonitor.hasActiveFaults(), onlyMCEstop)
             self.__printTelemetry()
 
             self.__telemetryLogger.logSample(self.__webserverController.getElapsedTime(),self.__webserverController.getPositions(),self.__webserverController.getSpeed(),self.__webserverController.getCurrents(),self.__webserverController.getVoltage(),self.__webserverController.getTemperatures())
@@ -375,11 +379,11 @@ class RCC:
             self.__faultMonitor,
             self.__motorController,
             isMotionForbidden=lambda: self.__state in (RCCState.IDLE, RCCState.OFF),
-            isMotor1AtTopLimit= lambda: self.__motorController.isAtTopLimit(1),
-            isMotor2AtTopLimit= lambda: self.__motorController.isAtTopLimit(2),
-            isMotor1AtBottomLimit= lambda: self.__motorController.isAtBottomLimit(1),
-            isMotor2AtBottomLimit= lambda: self.__motorController.isAtBottomLimit(2),
-
+            isMotor1AtTopLimit=lambda: self.__motorController.isAtTopLimit(1),
+            isMotor2AtTopLimit=lambda: self.__motorController.isAtTopLimit(2),
+            isMotor1AtBottomLimit=lambda: self.__motorController.isAtBottomLimit(1),
+            isMotor2AtBottomLimit=lambda: self.__motorController.isAtBottomLimit(2),
+            isResetting=lambda: self.__state == RCCState.RESETTING,
         )
 
     # =========================================================================

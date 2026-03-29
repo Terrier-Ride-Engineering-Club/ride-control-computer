@@ -103,7 +103,7 @@ class ControlPanel(ABC):
         self.__maintenanceJogSwitchCallbacks.append(callback)
     
     
-    def updateIndicators(self, state, hasActiveFaults: bool) -> None:
+    def updateIndicators(self, state, hasActiveFaults: bool, onlyMCEstopFault: bool = False) -> None:
         """
         Update indicator LEDs based on the current RCC state and fault status.
         Hardware implementations should override this.  The default is a no-op
