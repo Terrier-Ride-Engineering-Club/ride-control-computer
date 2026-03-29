@@ -546,8 +546,7 @@ class RCC:
 
         elif state == MomentarySwitchState.NEUTRAL:
             logger.info("Jog released")
-            self.__motorController.jogMotor(1, 0)
-            self.__motorController.jogMotor(2, 0)
+            self.__motorController.stopMotion()
 
     # =========================================================================
     #                              TELEMETRY

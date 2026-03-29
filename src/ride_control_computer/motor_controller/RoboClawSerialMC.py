@@ -66,12 +66,10 @@ class RoboClawSerialMotorController(MotorController):
     # --- Motion parameters ---
     JOG_SPEED              = 300
     JOG_ACCELERATION       = 2000
-    JOG_DECELERATION       = 2000
     JOG_POSITION_OFFSET    = 50_000   # Encoder counts ahead of current position for jog target
     STOP_SPEED             = 500      # QPPS — approach speed for position-hold commands
     STOP_DECELERATION      = 2000
     HALT_DECELERATION      = 10000
-    HOMING_DECELERATION    = 100
     STOPPED_THRESHOLD      = 5        # QPPS — below this, motors are considered stopped
     SERIAL_BLACKOUT_S      = 0.5      # seconds of total serial silence after clearCommand() to force RoboClaw watchdog
 
@@ -416,10 +414,8 @@ class RoboClawSerialMotorController(MotorController):
                         (direction > 0 and self._limitCache[m]["top"]) or
                         (direction < 0 and self._limitCache[m]["bottom"])
                     )
-                    stopping = direction == 0 or atLimit
-                    offset = 0 if stopping else direction * self.JOG_POSITION_OFFSET
-                    decel = self.HALT_DECELERATION if stopping else self.JOG_DECELERATION
-                    cmd[f"m{m}"] = {"position_offset": offset, "speed": self.JOG_SPEED, "accel": self.JOG_ACCELERATION, "decel": decel}
+                    offset = 0 if atLimit else direction * self.JOG_POSITION_OFFSET
+                    cmd[f"m{m}"] = {"position_offset": offset, "speed": self.JOG_SPEED, "accel": self.JOG_ACCELERATION}
 
             elif t == _CommandType.DRIVE:
                 for m, (pos, spd, acc, dec) in self._commandDrive.items():
@@ -535,16 +531,13 @@ class RoboClawSerialMotorController(MotorController):
                 atBottom = self._limitCache[motor]["bottom"]
                 atLimit  = (cmdJogDir > 0 and atTop) or (cmdJogDir < 0 and atBottom)
                 currentPos = self.getMotorPosition(motor)
-                if cmdJogDir == 0 or atLimit:
-                    # Neutral or at limit — hold at current position with aggressive decel
-                    self._roboClaw.drive_to_position_with_speed_acceleration_deceleration(
-                        motor, currentPos, self.JOG_SPEED, self.HALT_DECELERATION, self.HALT_DECELERATION
-                    )
+                if atLimit or cmdJogDir == 0:
+                    target = currentPos
                 else:
                     target = currentPos + (cmdJogDir * self.JOG_POSITION_OFFSET)
-                    self._roboClaw.drive_to_position_with_speed_acceleration_deceleration(
-                        motor, target, self.JOG_SPEED, self.JOG_ACCELERATION, self.JOG_DECELERATION
-                    )
+                self._roboClaw.drive_to_position_with_speed_acceleration_deceleration(
+                    motor, target, self.JOG_SPEED, self.JOG_ACCELERATION, self.JOG_ACCELERATION
+                )
 
                 # Encoder reset: fires once per bottom-limit arrival when jogging down.
                 # Flag is cleared when the motor leaves the bottom so re-arrivals reset again.
@@ -573,7 +566,7 @@ class RoboClawSerialMotorController(MotorController):
             for motor, atHome in [(1, m1Home), (2, m2Home)]:
                 if not atHome:
                     self._roboClaw.drive_to_position_with_speed_acceleration_deceleration(
-                        motor, HOMING_TARGET, HOMING_SPEED, HOMING_ACCELERATION, HOMING_DECELERATION
+                        motor, HOMING_TARGET, HOMING_SPEED, HOMING_ACCELERATION, HOMING_ACCELERATION
                     )
                 else:
                     # Reset encoder the first time this motor reaches the bottom limit
@@ -585,7 +578,7 @@ class RoboClawSerialMotorController(MotorController):
                         logger.info(f"Motor {motor} encoder zeroed at bottom limit (homing)")
                     # Hold at position 0 (the freshly zeroed home position)
                     self._roboClaw.drive_to_position_with_speed_acceleration_deceleration(
-                        motor, 0, HOMING_SPEED, HOMING_ACCELERATION, HOMING_DECELERATION
+                        motor, 0, HOMING_SPEED, HOMING_ACCELERATION, HOMING_ACCELERATION
                     )
 
             # Auto-switch to STOP (hold) once both motors are home
