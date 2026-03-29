@@ -177,7 +177,7 @@ class HardwareControlPanel(ControlPanel):
                    solid while held.
         """
         # E-Stop enable: permit motion only in IDLE or RUNNING
-        if state in (RCCState.IDLE, RCCState.RUNNING):
+        if state in (RCCState.IDLE, RCCState.RUNNING, RCCState.MAINTENANCE):
             self._estopEnable.on()
         else:
             self._estopEnable.off()
