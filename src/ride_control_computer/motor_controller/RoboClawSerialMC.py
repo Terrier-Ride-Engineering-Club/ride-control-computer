@@ -57,7 +57,7 @@ class RoboClawSerialMotorController(MotorController):
     HEARTBEAT_TTL      = 0.025  # seconds — must stay above RoboClaw's 20ms timeout
 
     # --- Motion parameters ---
-    JOG_SPEED          = 800
+    JOG_SPEED          = 1100
     JOG_ACCELERATION   = 2000
     STOP_DECELERATION  = 2000
     HALT_DECELERATION  = 10000
