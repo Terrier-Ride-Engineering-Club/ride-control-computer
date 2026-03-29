@@ -64,6 +64,7 @@ class RoboClawSerialMotorController(MotorController):
     HALT_DECELERATION  = 10000
     STOPPED_THRESHOLD              = 5    # QPPS — below this, motors are considered stopped
     VELOCITY_TO_POSITION_LOCKOUT_S = 0.4  # seconds to wait after last velocity command before allowing DRIVE
+    SERIAL_BLACKOUT_S              = 0.5  # seconds of total serial silence after clearCommand() to force RoboClaw watchdog
 
     def __init__(self, ports: list[str], address: int = 0x80):
         """
@@ -99,6 +100,10 @@ class RoboClawSerialMotorController(MotorController):
         # for VELOCITY_TO_POSITION_LOCKOUT_S after any velocity command to prevent
         # the position PID from seeing accumulated velocity-mode encoder error.
         self._lastVelocityCmdTime: float = time.monotonic()
+        # Tracks when clearCommand() was last called; all serial I/O (reads + writes)
+        # is suppressed for SERIAL_BLACKOUT_S to force the RoboClaw's packet-serial
+        # watchdog to fire and halt motion. Init far in the past so no blackout on startup.
+        self._serialBlackoutStart: float = 0.0
 
         # --- Telemetry cache (serial thread writes, any thread reads) ---
         self._telemetry = ControllerTelemetry()
@@ -244,6 +249,7 @@ class RoboClawSerialMotorController(MotorController):
     def clearCommand(self) -> None:
         with self._commandLock:
             self._commandType = _CommandType.NONE
+            self._serialBlackoutStart = time.monotonic()
 
     def stopMotion(self) -> None:
         with self._commandLock:
@@ -428,6 +434,12 @@ class RoboClawSerialMotorController(MotorController):
                     logger.info("Attempting to reconnect to RoboClaw...")
                     self._tryConnect()
                 self._stopEvent.wait(0.1)
+                continue
+
+            # Total serial silence window: suppresses both reads and writes so the
+            # RoboClaw's packet-serial watchdog can fire and halt motion.
+            # Active for SERIAL_BLACKOUT_S after clearCommand() is called.
+            if now - self._serialBlackoutStart < self.SERIAL_BLACKOUT_S:
                 continue
 
             try:
