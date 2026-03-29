@@ -198,9 +198,10 @@ class RCC:
             self.__processInputs()
             self.__updateState()
             self.__monitorSafety()
+            activeFaults = self.__faultMonitor.getActiveFaults()
             onlyMCEstop = (
-                len(self.__lastEstopFaults) == 1
-                and self.__lastEstopFaults[0]["code"] == "MC_ESTOP_ACTIVE"
+                len(activeFaults) == 1
+                and activeFaults[0].code == "MC_ESTOP_ACTIVE"
             )
             self.__controlPanel.updateIndicators(self.__state, self.__faultMonitor.hasActiveFaults(), onlyMCEstop)
             self.__printTelemetry()
