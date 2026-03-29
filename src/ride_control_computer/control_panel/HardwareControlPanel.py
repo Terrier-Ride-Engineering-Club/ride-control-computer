@@ -176,6 +176,12 @@ class HardwareControlPanel(ControlPanel):
         Stop     — no autonomous blink behavior; press-override still lights it
                    solid while held.
         """
+        # E-Stop enable: permit motion only in IDLE or RUNNING
+        if state in (RCCState.IDLE, RCCState.RUNNING):
+            self._estopEnable.on()
+        else:
+            self._estopEnable.off()
+
         # Dispatch: blink when ready for the operator to dispatch
         self._dispatchLED.setMode(
             _LEDMode.BLINK if state == RCCState.IDLE else _LEDMode.OFF
