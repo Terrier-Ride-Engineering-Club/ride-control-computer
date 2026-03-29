@@ -373,16 +373,27 @@ class RoboClawSerialMotorController(MotorController):
 
     def getCurrentCommand(self) -> dict:
         with self._commandLock:
-            cmd = {"type": self._commandType.name}
-            if self._commandType == _CommandType.JOG:
-                cmd["jogDir"] = self._commandJogDir
-            elif self._commandType == _CommandType.DRIVE:
-                cmd["drive"] = {
-                    str(m): {"position": p, "speed": s, "accel": a, "decel": d}
-                    for m, (p, s, a, d) in self._commandDrive.items()
-                }
-            elif self._commandType == _CommandType.STOP:
-                cmd["decel"] = self._commandDecel
+            t = self._commandType
+            cmd = {"type": t.name}
+
+            if t == _CommandType.STOP:
+                for m in [1, 2]:
+                    cmd[f"m{m}"] = {"speed": 0, "accel": self._commandDecel}
+
+            elif t == _CommandType.JOG:
+                speed = self.JOG_SPEED if self._commandJogDir > 0 else (
+                        -self.JOG_SPEED if self._commandJogDir < 0 else 0)
+                for m in [1, 2]:
+                    cmd[f"m{m}"] = {"speed": speed, "accel": self.JOG_ACCELERATION}
+
+            elif t == _CommandType.DRIVE:
+                for m, (pos, spd, acc, dec) in self._commandDrive.items():
+                    cmd[f"m{m}"] = {"position": pos, "speed": spd, "accel": acc, "decel": dec}
+
+            elif t == _CommandType.HOME:
+                for m in [1, 2]:
+                    cmd[f"m{m}"] = {"speed": -HOMING_SPEED, "accel": HOMING_ACCELERATION}
+
             return cmd
 
     # =========================================================================

@@ -171,22 +171,23 @@
 <div class="card shadow mb-4">
     <div class="card-header fw-bold">Motor Controller Command</div>
     <div class="card-body p-0">
-        <table class="table table-sm table-bordered mb-0" id="motorCommandTable">
-            <thead class="table-dark"><tr><th>Field</th><th>Value</th></tr></thead>
+        <table class="table table-sm table-bordered mb-0">
+            <thead class="table-dark"><tr><th>Field</th><th>Motor 1</th><th>Motor 2</th></tr></thead>
             <tbody id="motorCommandBody">
                 {% if motor_command %}
-                <tr><td>Type</td><td><span class="badge bg-primary">{{ motor_command.type }}</span></td></tr>
-                {% if motor_command.type == 'JOG' %}
-                <tr><td>Direction</td><td>{{ motor_command.jogDir }}</td></tr>
-                {% elif motor_command.type == 'DRIVE' %}
-                {% for mnum, params in motor_command.drive.items() %}
-                <tr><td>M{{ mnum }} Target</td><td>{{ params.position }} @ {{ params.speed }} QPPS</td></tr>
-                {% endfor %}
-                {% elif motor_command.type == 'STOP' %}
-                <tr><td>Decel</td><td>{{ motor_command.decel }}</td></tr>
+                <tr><td>Type</td><td colspan="2"><span class="badge bg-primary">{{ motor_command.type }}</span></td></tr>
+                {% set fields = ['position', 'speed', 'accel', 'decel'] %}
+                {% for field in fields %}
+                {% if motor_command.get('m1', {}).get(field) is not none or motor_command.get('m2', {}).get(field) is not none %}
+                <tr>
+                    <td>{{ field }}</td>
+                    <td>{{ motor_command.get('m1', {}).get(field, '—') }}</td>
+                    <td>{{ motor_command.get('m2', {}).get(field, '—') }}</td>
+                </tr>
                 {% endif %}
+                {% endfor %}
                 {% else %}
-                <tr><td colspan="2" class="text-muted text-center">Unavailable</td></tr>
+                <tr><td colspan="3" class="text-muted text-center">Unavailable</td></tr>
                 {% endif %}
             </tbody>
         </table>
@@ -357,17 +358,15 @@ setInterval(async () => {
     const mcCmdBody = document.getElementById("motorCommandBody");
     if (mcCmdBody) {
         if (!mc) {
-            mcCmdBody.innerHTML = '<tr><td colspan="2" class="text-muted text-center">Unavailable</td></tr>';
+            mcCmdBody.innerHTML = '<tr><td colspan="3" class="text-muted text-center">Unavailable</td></tr>';
         } else {
-            let html = `<tr><td>Type</td><td><span class="badge bg-primary">${mc.type}</span></td></tr>`;
-            if (mc.type === "JOG") {
-                html += `<tr><td>Direction</td><td>${mc.jogDir > 0 ? "UP" : mc.jogDir < 0 ? "DOWN" : "0"}</td></tr>`;
-            } else if (mc.type === "DRIVE" && mc.drive) {
-                for (const [mnum, p] of Object.entries(mc.drive)) {
-                    html += `<tr><td>M${mnum} Target</td><td>${p.position} @ ${p.speed} QPPS</td></tr>`;
-                }
-            } else if (mc.type === "STOP") {
-                html += `<tr><td>Decel</td><td>${mc.decel}</td></tr>`;
+            let html = `<tr><td>Type</td><td colspan="2"><span class="badge bg-primary">${mc.type}</span></td></tr>`;
+            const m1 = mc.m1 || {}, m2 = mc.m2 || {};
+            const allKeys = [...new Set([...Object.keys(m1), ...Object.keys(m2)])];
+            for (const key of ["position", "speed", "accel", "decel"].filter(k => allKeys.includes(k))) {
+                const v1 = m1[key] != null ? m1[key] : "—";
+                const v2 = m2[key] != null ? m2[key] : "—";
+                html += `<tr><td>${key}</td><td>${v1}</td><td>${v2}</td></tr>`;
             }
             mcCmdBody.innerHTML = html;
         }
