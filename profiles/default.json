@@ -4,8 +4,8 @@
     "segments": [
         {
             "name": "Lift",
-            "motor1": {"type": "driveToPosition", "position": 3800, "speed": 2500, "accel": 1000, "decel": 2000},
-            "motor2": {"type": "driveToPosition", "position": 3800, "speed": 2500, "accel": 1000, "decel": 2000},
+            "motor1": {"type": "driveToPosition", "position": 3800, "speed": 1000, "accel": 100, "decel": 2000},
+            "motor2": {"type": "driveToPosition", "position": 3800, "speed": 1000, "accel": 100, "decel": 2000},
             "completionMode": "waitForBoth",
             "timeoutS": 15.0
         },
