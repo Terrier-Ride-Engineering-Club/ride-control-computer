@@ -529,17 +529,17 @@ class RoboClawSerialMotorController(MotorController):
                         bottomResetDone[motor] = False
 
         elif cmdType == _CommandType.DRIVE:
-            for motor in [1,2]:
-                if atBottom and not bottomResetDone[motor]:
-                    self._roboClaw.reset_quad_encoders([motor])
-                    with self._commandLock:
-                        self._bottomResetDone[motor] = True
-                    bottomResetDone[motor] = True
-                    logger.info(f"Motor {motor} encoder zeroed at bottom limit (jog)")
-                elif not atBottom:
-                    with self._commandLock:
-                        self._bottomResetDone[motor] = False
-                    bottomResetDone[motor] = False
+            # for motor in [1,2]:
+            #     if atBottom and not bottomResetDone[motor]:
+            #         self._roboClaw.reset_quad_encoders([motor])
+            #         with self._commandLock:
+            #             self._bottomResetDone[motor] = True
+            #         bottomResetDone[motor] = True
+            #         logger.info(f"Motor {motor} encoder zeroed at bottom limit (jog)")
+            #     elif not atBottom:
+            #         with self._commandLock:
+            #             self._bottomResetDone[motor] = False
+            #         bottomResetDone[motor] = False
 
             age = time.monotonic() - self._lastVelocityCmdTime
             if age < self.VELOCITY_TO_POSITION_LOCKOUT_S:
