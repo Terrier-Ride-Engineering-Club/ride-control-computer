@@ -48,12 +48,12 @@ def registerMotorControllerFaults(
         description="Motor controller telemetry is stale — communication lost",
         condition=mc.isTelemetryStale,
     ))
-    monitor.register(Fault(
-        code="MC_ESTOP_ACTIVE",
-        severity=FaultSeverity.HIGH,
-        description="Hardware E-Stop is active on motor controller",
-        condition=lambda: mc.isEstopActive() and not isResetting(),
-    ))
+    # monitor.register(Fault(
+    #     code="MC_ESTOP_ACTIVE",
+    #     severity=FaultSeverity.HIGH,
+    #     description="Hardware E-Stop is active on motor controller",
+    #     condition=lambda: mc.isEstopActive() and not isResetting(),
+    # ))
     monitor.register(Fault(
         code="MC_STATUS_ABNORMAL",
         severity=FaultSeverity.HIGH,
