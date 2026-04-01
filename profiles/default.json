@@ -1,26 +1,32 @@
 {
-    "name": "Standard Drop Profile",
-    "rideDurationS": 44.0,
+    "name": "Independent Tower Drop",
+    "rideDurationS": 30.0,
     "segments": [
         {
-            "name": "Lift",
+            "name": "Lift both towers",
             "motor1": {"type": "driveToPosition", "position": 4500, "speed": 1000, "accel": 1000, "decel": 2000},
             "motor2": {"type": "driveToPosition", "position": 4500, "speed": 1000, "accel": 1000, "decel": 2000},
-            "completionMode": "waitForEither",
+            "completionMode": "waitForBoth",
             "timeoutS": 15.0
         },
         {
             "name": "Hold at top",
             "completionMode": "duration",
             "durationS": 2.0,
-            "timeoutS": 30.0
+            "timeoutS": 2.5
         },
         {
-            "name": "Drop",
+            "name": "Drop tower 1",
             "motor1": {"type": "driveToPosition", "position": 500, "speed": 5000, "accel": 10000, "decel": 5000},
-            "motor2": {"type": "driveToPosition", "position": 500, "speed": 5000, "accel": 10000, "decel": 5000},
             "completionMode": "waitForBoth",
             "timeoutS": 10.0
+        },
+        {
+            "name": "Drop tower 2 and launch tower 1",
+            "motor1": {"type": "driveToPosition", "position": 4500, "speed": 1000, "accel": 1000, "decel": 2000},
+            "motor2": {"type": "driveToPosition", "position": 500, "speed": 5000, "accel": 10000, "decel": 5000},
+            "completionMode": "waitForBoth",
+            "timeoutS": 20.0
         }
     ]
 }
