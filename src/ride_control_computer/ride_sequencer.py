@@ -104,13 +104,16 @@ class RideSequencer:
 
         logger.info(f"Starting segment [{index + 1}/{len(self._profile.segments)}]: '{segment.name}'")
 
-        if segment.motor1 is not None:
-            cmd = segment.motor1
-            self._mc.driveToPosition(1, cmd.position, cmd.speed, cmd.accel, cmd.decel)
+        if segment.homeMotors:
+            self._mc.homeMotors()
+        else:
+            if segment.motor1 is not None:
+                cmd = segment.motor1
+                self._mc.driveToPosition(1, cmd.position, cmd.speed, cmd.accel, cmd.decel)
 
-        if segment.motor2 is not None:
-            cmd = segment.motor2
-            self._mc.driveToPosition(2, cmd.position, cmd.speed, cmd.accel, cmd.decel)
+            if segment.motor2 is not None:
+                cmd = segment.motor2
+                self._mc.driveToPosition(2, cmd.position, cmd.speed, cmd.accel, cmd.decel)
 
     def _currentSegment(self) -> ProfileSegment:
         return self._profile.segments[self._currentSegmentIndex]
@@ -124,6 +127,8 @@ class RideSequencer:
             return self._mc.isMotorNearTarget(1) or self._mc.isMotorNearTarget(2)
         elif segment.completionMode == "duration":
             return elapsed >= segment.durationS
+        elif segment.completionMode == "waitForHome":
+            return self._mc.isHomingComplete()
         else:
             logger.error(
                 f"Unknown completionMode '{segment.completionMode}' in segment '{segment.name}' — aborting ride"

@@ -33,6 +33,18 @@
             "motor2": {"type": "driveToPosition", "position": 4500, "speed": 2000, "accel": 2000, "decel": 4000},
             "completionMode": "waitForBoth",
             "timeoutS": 10.0
+        },
+        {
+            "name": "Home both towers",
+            "homeMotors": true,
+            "completionMode": "waitForHome",
+            "timeoutS": 10.0
+        },
+        {
+            "name": "Loading pause",
+            "completionMode": "duration",
+            "durationS": 16.0,
+            "timeoutS": 17.0
         }
     ]
 }

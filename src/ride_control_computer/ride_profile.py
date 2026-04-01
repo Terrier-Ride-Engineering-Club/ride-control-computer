@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 
 logger = logging.getLogger(__name__)
 
-VALID_COMPLETION_MODES = {"waitForBoth", "waitForEither", "duration"}
+VALID_COMPLETION_MODES = {"waitForBoth", "waitForEither", "duration", "waitForHome"}
 
 
 @dataclass
@@ -36,11 +36,12 @@ class MotorCommand:
 class ProfileSegment:
     """A single phase of a ride profile."""
     name: str
-    completionMode: str         # "waitForBoth" | "waitForEither" | "duration"
+    completionMode: str         # "waitForBoth" | "waitForEither" | "duration" | "waitForHome"
     timeoutS: float             # Max seconds before the segment is force-aborted (→ ESTOP)
-    motor1: MotorCommand | None = None   # None for duration-only segments
+    motor1: MotorCommand | None = None   # None for duration-only or home segments
     motor2: MotorCommand | None = None
     durationS: float = 0.0      # Used only when completionMode == "duration"
+    homeMotors: bool = False    # If True, triggers mc.homeMotors() instead of position commands
 
     @classmethod
     def fromDict(cls, d: dict) -> ProfileSegment:
@@ -59,6 +60,7 @@ class ProfileSegment:
             motor1=motor1,
             motor2=motor2,
             durationS=float(d.get("durationS", 0.0)),
+            homeMotors=bool(d.get("homeMotors", False)),
         )
 
 

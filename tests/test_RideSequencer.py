@@ -14,7 +14,7 @@ def _cmd(position=1000):
                         speed=500, accel=200, decel=200)
 
 def _seg(name="seg", mode="waitForBoth", timeoutS=10.0, durationS=0.0,
-         withMotor1=True, withMotor2=True):
+         withMotor1=True, withMotor2=True, homeMotors=False):
     return ProfileSegment(
         name=name,
         completionMode=mode,
@@ -22,6 +22,7 @@ def _seg(name="seg", mode="waitForBoth", timeoutS=10.0, durationS=0.0,
         motor1=_cmd() if withMotor1 else None,
         motor2=_cmd() if withMotor2 else None,
         durationS=durationS,
+        homeMotors=homeMotors,
     )
 
 def _profile(*segments):
@@ -224,3 +225,53 @@ class TestAbortAndTimeout:
         seq = RideSequencer(mc, _profile(_seg(timeoutS=0.0)))
         seq.start()
         seq.tick()  # should not raise
+
+
+# ── waitForHome and homeMotors ────────────────────────────────────────────────
+
+class ControllableMCWithHoming(ControllableMC):
+    """Adds controllable isHomingComplete() for homing tests."""
+    def __init__(self):
+        super().__init__()
+        self._homingComplete = False
+
+    def isHomingComplete(self):
+        return self._homingComplete
+
+
+class TestHoming:
+
+    def testWaitForHomeCompletesWhenHomingComplete(self):
+        mc = ControllableMCWithHoming()
+        mc._homingComplete = True
+        seq = RideSequencer(mc, _profile(_seg(mode="waitForHome", homeMotors=True,
+                                              withMotor1=False, withMotor2=False)))
+        seq.start()
+        seq.tick()
+        assert seq.isComplete()
+
+    def testWaitForHomeStaysActiveWhenNotComplete(self):
+        mc = ControllableMCWithHoming()
+        mc._homingComplete = False
+        seq = RideSequencer(mc, _profile(_seg(mode="waitForHome", homeMotors=True,
+                                              withMotor1=False, withMotor2=False)))
+        seq.start()
+        seq.tick()
+        assert not seq.isComplete()
+
+    def testHomeMotorsFlagCallsHomeMotors(self):
+        mc = MagicMock(spec=ControllableMCWithHoming())
+        mc.isHomingComplete.return_value = False
+        seq = RideSequencer(mc, _profile(_seg(mode="waitForHome", homeMotors=True,
+                                              withMotor1=False, withMotor2=False)))
+        seq.start()
+        mc.homeMotors.assert_called_once()
+
+    def testHomeMotorsFlagSkipsDriveToPosition(self):
+        mc = MagicMock(spec=ControllableMCWithHoming())
+        mc.isHomingComplete.return_value = False
+        seq = RideSequencer(mc, _profile(_seg(mode="waitForHome", homeMotors=True,
+                                              withMotor1=True, withMotor2=True)))
+        seq.start()
+        mc.homeMotors.assert_called_once()
+        mc.driveToPosition.assert_not_called()
