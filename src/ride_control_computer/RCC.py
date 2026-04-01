@@ -84,6 +84,7 @@ class RCC:
                 "severity": "HIGH",
                 "description": f"Ride segment '{self.__sequencer._currentSegment().name}' timed out",
             }]),
+            onCycleEnd=lambda: self.__rideTimer.endRide(),
         )
 
         self.__faultMonitor = FaultMonitor()
@@ -333,6 +334,7 @@ class RCC:
         self.__sequencer.tick()
         if self.__sequencer.isComplete():
             logger.info("Ride profile complete — restarting profile")
+            self.__rideTimer.startRide()
             self.__sequencer.start()
 
     def __checkStoppingProgress(self):

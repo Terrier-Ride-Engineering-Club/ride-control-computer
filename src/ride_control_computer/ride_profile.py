@@ -42,6 +42,7 @@ class ProfileSegment:
     motor2: MotorCommand | None = None
     durationS: float = 0.0      # Used only when completionMode == "duration"
     homeMotors: bool = False    # If True, triggers mc.homeMotors() instead of position commands
+    endsCycle: bool = False     # If True, fires onCycleEnd callback when this segment starts
 
     @classmethod
     def fromDict(cls, d: dict) -> ProfileSegment:
@@ -61,6 +62,7 @@ class ProfileSegment:
             motor2=motor2,
             durationS=float(d.get("durationS", 0.0)),
             homeMotors=bool(d.get("homeMotors", False)),
+            endsCycle=bool(d.get("endsCycle", False)),
         )
 
 

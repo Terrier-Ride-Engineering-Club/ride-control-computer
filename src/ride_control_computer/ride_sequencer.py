@@ -30,10 +30,12 @@ class RideSequencer:
         mc: MotorController,
         profile: RideProfile,
         onTimeout: Callable[[], None] | None = None,
+        onCycleEnd: Callable[[], None] | None = None,
     ):
         self._mc = mc
         self._profile = profile
         self._onTimeout = onTimeout
+        self._onCycleEnd = onCycleEnd
 
         self._currentSegmentIndex: int = 0
         self._segmentStartTime: float = 0.0
@@ -103,6 +105,9 @@ class RideSequencer:
         segment = self._profile.segments[index]
 
         logger.info(f"Starting segment [{index + 1}/{len(self._profile.segments)}]: '{segment.name}'")
+
+        if segment.endsCycle and self._onCycleEnd:
+            self._onCycleEnd()
 
         if segment.homeMotors:
             self._mc.homeMotors()
