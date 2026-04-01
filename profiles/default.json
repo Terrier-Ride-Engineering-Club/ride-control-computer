@@ -35,6 +35,13 @@
             "timeoutS": 10.0
         },
         {
+            "name": "Drop both",
+            "motor1": {"type": "driveToPosition", "position": 500, "speed": 5000, "accel": 10000, "decel": 5000},
+            "motor2": {"type": "driveToPosition", "position": 500, "speed": 5000, "accel": 10000, "decel": 5000},
+            "completionMode": "waitForBoth",
+            "timeoutS": 10.0
+        },
+        {
             "name": "Home both towers",
             "homeMotors": true,
             "completionMode": "waitForHome",
@@ -44,7 +51,8 @@
             "name": "Loading pause",
             "completionMode": "duration",
             "durationS": 16.0,
-            "timeoutS": 17.0
+            "timeoutS": 17.0,
+            "endsCycle": true
         }
     ]
 }
