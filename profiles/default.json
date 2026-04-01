@@ -1,6 +1,6 @@
 {
     "name": "Independent Tower Drop",
-    "rideDurationS": 30.0,
+    "rideDurationS": 44.0,
     "segments": [
         {
             "name": "Lift both towers",
