@@ -1,3 +1,4 @@
+import time
 from typing import Callable
 
 from ride_control_computer.fault_monitor import Fault, FaultMonitor, FaultSeverity
@@ -48,12 +49,20 @@ def registerMotorControllerFaults(
         description="Motor controller telemetry is stale — communication lost",
         condition=mc.isTelemetryStale,
     ))
-    # monitor.register(Fault(
-    #     code="MC_ESTOP_ACTIVE",
-    #     severity=FaultSeverity.HIGH,
-    #     description="Hardware E-Stop is active on motor controller",
-    #     condition=lambda: mc.isEstopActive() and not isResetting(),
-    # ))
+    _estopFirstSeen: list[float | None] = [None]
+    def _estopCondition() -> bool:
+        if mc.isEstopActive() and not isResetting():
+            if _estopFirstSeen[0] is None:
+                _estopFirstSeen[0] = time.monotonic()
+            return (time.monotonic() - _estopFirstSeen[0]) >= 0.1
+        _estopFirstSeen[0] = None
+        return False
+    monitor.register(Fault(
+        code="MC_ESTOP_ACTIVE",
+        severity=FaultSeverity.HIGH,
+        description="Hardware E-Stop is active on motor controller",
+        condition=_estopCondition,
+    ))
     monitor.register(Fault(
         code="MC_STATUS_ABNORMAL",
         severity=FaultSeverity.HIGH,
