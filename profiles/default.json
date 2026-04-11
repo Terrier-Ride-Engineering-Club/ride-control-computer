@@ -19,7 +19,7 @@
             "name": "Drop",
             "motor1": {"type": "driveToPosition", "position": 500, "speed": 5000, "accel": 10000, "decel": 5000},
             "motor2": {"type": "driveToPosition", "position": 500, "speed": 5000, "accel": 10000, "decel": 5000},
-            "completionMode": "waitForBoth",
+            "completionMode": "waitForEither",
             "timeoutS": 10.0
         }
     ]
